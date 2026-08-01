@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>Prospect Paneli</title>
+<style>
+  :root {
+    --zemin: #0f1319; --yuzey: #161c24; --yuzey-2: #1c242e;
+    --metin: #e7ecf3; --metin-2: #b6c2d1; --soluk: #8996a8;
+    --cizgi: #26303b; --cizgi-2: #35414f;
+    --ana: #8fb4e0; --vurgu: #e2a344;
+    --iyi: #58b389; --kotu: #e0805c;
+    --mono: "Cascadia Code", ui-monospace, "SF Mono", Consolas, monospace;
+    /* Baslik cubugunun GERCEK yuksekligi — JS her degistiginde yaziyor.
+       Sabit deger yazmak hataliydi: cubuk 4.6rem'den kisaysa aradaki
+       bosluktan tablo satirlari sizip yapiskan basligin ustune biniyordu,
+       uzunsa baslik cubugun altinda kayboluyordu. Cubuk dar ekranda
+       satir da atliyor, yani yukseklik sabit degil. */
+    --tepe-boy: 4.6rem;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--zemin); color: var(--metin);
+    font: 15px/1.6 "Segoe UI", system-ui, sans-serif;
+  }
+  a { color: var(--ana); }
+  h1 { font-size: 1.15rem; margin: 0; font-weight: 620; white-space: nowrap; }
+
+  .tepe {
+    display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;
+    padding: .9rem 1.5rem; border-bottom: 1px solid var(--cizgi);
+    position: sticky; top: 0; background: var(--zemin); z-index: 20;
+  }
+  .ozet { display: flex; gap: 1.4rem; flex-wrap: wrap; font-size: .84rem; color: var(--soluk); }
+  .ozet b { color: var(--metin); font-variant-numeric: tabular-nums; }
+  .ara {
+    margin-left: auto; background: var(--yuzey); color: var(--metin);
+    border: 1px solid var(--cizgi-2); border-radius: 6px;
+    padding: .4rem .7rem; font: inherit; font-size: .85rem; width: 15rem;
+  }
+  .ara:focus { outline: 2px solid var(--ana); outline-offset: 1px; }
+
+  .govde { display: grid; grid-template-columns: 1fr; align-items: start; }
+  @media (min-width: 62rem) { .govde.acik { grid-template-columns: 1fr 24rem; } }
+
+  .filtreler { display: flex; gap: .4rem; flex-wrap: wrap; padding: .9rem 1.5rem 0; }
+  .filtre {
+    border: 1px solid var(--cizgi-2); background: transparent; color: var(--metin-2);
+    padding: .3rem .7rem; border-radius: 999px; font-size: .8rem; cursor: pointer;
+  }
+  .filtre[aria-pressed="true"] { background: var(--ana); color: var(--zemin); border-color: var(--ana); }
+
+/*
+  BURADA `overflow-x: auto` YOK — bilerek.
+
+  Vardı ve yapışkan tablo başlığını bozuyordu: overflow bir kaydırma
+  kutusu yaratıyor, `position: sticky` de ekrana değil O KUTUYA göre
+  konumlanıyor. Kutunun kendi dikey kaydırması olmadığı için başlık
+  yapışacak yer bulamıyor ve sayfayla birlikte kayıp gidiyordu.
+
+  Yatay kaydırma gerektiğinde (dar ekran) sayfanın kendisi kayıyor;
+  tablonun min-width'i onu tetikliyor. */
+  .kaydir { padding: 1rem 1.5rem 4rem; }
+  table { width: 100%; min-width: 52rem; border-collapse: collapse; font-size: .875rem; }
+  th {
+    text-align: left; font-size: .68rem; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--soluk); font-weight: 650; padding: 0; border-bottom: 1px solid var(--cizgi);
+    white-space: nowrap;
+    position: sticky; top: var(--tepe-boy); background: var(--zemin); z-index: 10;
+  }
+  /* Baslik butonu: tum hucreyi kapliyor ki tiklama alani genis olsun. */
+  th button {
+    all: unset; cursor: pointer; display: block; width: 100%;
+    padding: .5rem .6rem; color: inherit; font: inherit;
+    text-transform: inherit; letter-spacing: inherit; font-weight: inherit;
+  }
+  th button:hover { color: var(--metin); }
+  th button:focus-visible { outline: 2px solid var(--ana); outline-offset: -2px; }
+  th[aria-sort] button { color: var(--metin); }
+  .ok { opacity: .55; font-size: .85em; }
+
+  td { padding: .55rem .6rem; border-bottom: 1px solid var(--cizgi); vertical-align: top; }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover { background: var(--yuzey); }
+  tbody tr[aria-selected="true"] { background: var(--yuzey-2); box-shadow: inset 3px 0 0 var(--ana); }
+  .ad { font-weight: 600; }
+  .alt { color: var(--soluk); font-size: .78rem; }
+  .mono { font-family: var(--mono); font-size: .8rem; color: var(--metin-2); white-space: nowrap; }
+
+  .rozet { display: inline-block; padding: .12rem .5rem; border-radius: 999px;
+           font-size: .7rem; font-weight: 650; white-space: nowrap; }
+  .r-hazir      { color: var(--soluk); border: 1px dashed var(--cizgi-2); }
+  .r-gonderildi { color: var(--ana);   background: color-mix(in srgb, var(--ana) 15%, transparent); }
+  .r-cevapsiz   { color: var(--soluk); background: color-mix(in srgb, var(--soluk) 15%, transparent); }
+  .r-cevap      { color: var(--vurgu); background: color-mix(in srgb, var(--vurgu) 15%, transparent); }
+  .r-gorusme    { color: var(--vurgu); background: color-mix(in srgb, var(--vurgu) 22%, transparent); }
+  .r-anlasildi  { color: var(--iyi);   background: color-mix(in srgb, var(--iyi) 18%, transparent); }
+  /* Beklemede = kaybedilmedi, ertelendi. Kesikli cerceve bilerek:
+     "burada bir is var ama simdi degil" gorsel olarak da ayrilsin. */
+  .r-beklemede  { color: var(--vurgu); border: 1px dashed color-mix(in srgb, var(--vurgu) 55%, transparent); }
+  .r-kaybedildi { color: var(--kotu);  background: color-mix(in srgb, var(--kotu) 15%, transparent); }
+  .r-vazgecildi { color: var(--soluk); background: color-mix(in srgb, var(--soluk) 10%, transparent); }
+
+  /*
+    DUZENLEME PANELI YAPISKAN.
+    Onceki halinde panel sayfanin en ustunde duruyordu; alttaki bir
+    isletmeye tiklayinca yukari kaydirmak gerekiyordu. Simdi baslik
+    cubugunun hemen altina yapisiyor ve kendi icinde kayiyor.
+  */
+  .duzen {
+    display: none; background: var(--yuzey);
+    border-left: 1px solid var(--cizgi);
+    padding: 1.2rem 1.4rem 2rem;
+    position: sticky; top: var(--tepe-boy);
+    max-height: calc(100vh - var(--tepe-boy)); overflow-y: auto;
+  }
+  .govde.acik .duzen { display: block; }
+  @media (max-width: 62rem) {
+    .govde.acik .duzen {
+      position: static; max-height: none;
+      border-left: 0; border-top: 1px solid var(--cizgi);
+    }
+  }
+  .duzen h2 { font-size: 1rem; margin: 0 0 .2rem; padding-right: 1.5rem; }
+  .duzen > .alt { margin-bottom: 1.1rem; }
+  label { display: block; font-size: .72rem; text-transform: uppercase; letter-spacing: .07em;
+          color: var(--soluk); margin: .9rem 0 .25rem; }
+  input, select, textarea {
+    width: 100%; background: var(--zemin); color: var(--metin);
+    border: 1px solid var(--cizgi-2); border-radius: 5px; padding: .45rem .55rem;
+    font: inherit; font-size: .875rem;
+  }
+  textarea { min-height: 5rem; resize: vertical; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--ana); outline-offset: 1px; }
+  .baglar { display: flex; gap: .8rem; flex-wrap: wrap; margin-top: 1rem; font-size: .8rem; }
+  .kapat { position: absolute; right: 1rem; top: 1rem; background: none; border: 0;
+           color: var(--soluk); cursor: pointer; font-size: 1.2rem; line-height: 1; }
+  .duzen { position: sticky; }
+  .duzen-ic { position: relative; }
+  .kayit-bilgi { font-size: .75rem; color: var(--iyi); min-height: 1.2em; margin-top: .8rem; }
+  .bos { padding: 3rem 1.5rem; color: var(--soluk); }
+</style>
+</head>
+<body>
+
+<header class="tepe">
+  <h1>Prospect Paneli</h1>
+  <div class="ozet" id="ozet"></div>
+  <input class="ara" id="ara" type="search" placeholder="Ara: isim, şehir, telefon, not…" autocomplete="off">
+</header>
+
+<div class="filtreler" id="filtreler"></div>
+
+<div class="govde" id="govde">
+  <div class="kaydir">
+    <table>
+      <thead><tr id="basliklar"></tr></thead>
+      <tbody id="satirlar"></tbody>
+    </table>
+    <p class="bos" id="bos" hidden>Eşleşen kayıt yok.</p>
+  </div>
+  <aside class="duzen" id="duzen"></aside>
+</div>
+
+<script>
+/*
+   Sira PIPELINE sirasi, alfabetik degil — 'durum' sutununa gore
+   siralama bu diziyi kullaniyor.
+
+   'beklemede' KAYIP DEGIL, ERTELENMIS: is gercek ama sartlar simdi
+   uygun degil. Gerede Esentepe boyle — belediye isletmesi, faturasiz
+   odeme yapamiyor. Kaybedildi yazsak kapanmis sayardik ve bir daha
+   donmezdik; gonderildi biraksak surekli "cevap bekliyor" gorunurdu.
+   Sirket kurulunca donulecek isler burada birikiyor.
+*/
+const DURUMLAR = [
+  ['hazir', 'Hazır'], ['gonderildi', 'Gönderildi'], ['cevapsiz', 'Cevap yok'],
+  ['cevap', 'Cevap geldi'], ['gorusme', 'Görüşme'], ['anlasildi', 'Anlaşıldı'],
+  ['beklemede', 'Beklemede'],
+  ['kaybedildi', 'Kaybedildi'], ['vazgecildi', 'Vazgeçildi'],
+];
+const KAYIP = [
+  ['', '—'], ['butce', 'Bütçe yok'], ['ihtiyac-yok', 'İhtiyaç görmüyor'],
+  ['sitesi-var', 'Sitesi varmış'], ['cevapsiz', 'Hiç dönmedi'],
+  ['ilgilenmedi', 'İlgilenmedi'], ['diger', 'Diğer'],
+];
+const SITE = [['', '—'], ['yok', 'Yok'], ['yapiliyor', 'Yapılıyor'], ['yayinda', 'Yayında']];
+
+/*
+  Sutunlar tek yerden tanimli: baslik, siralama anahtari ve hucre ciziciyle.
+  Yeni bir sutun eklemek icin sadece buraya satir eklemek yetiyor.
+
+  `anahtar` siralama degerini uretiyor. Durum icin ALFABETIK degil BORU
+  HATTI sirasi kullaniliyor — "Anlasildi"nin "Cevap yok"tan once gelmesi
+  alfabetik dogru ama ise yaramaz; sureci takip etmek istiyoruz.
+*/
+const SUTUNLAR = [
+  { id: 'ad', baslik: 'İşletme', anahtar: (k) => k.ad ?? '',
+    ciz: (k) => `<div class="ad">${k.ad}</div>
+      <div class="alt">${[k.ilce, k.il].filter(Boolean).join(' · ')}${k.puan ? ` · ★${k.puan} (${k.yorumSayisi ?? '?'})` : ''}</div>` },
+  { id: 'durum', baslik: 'Durum', anahtar: (k) => DURUMLAR.findIndex((d) => d[0] === k.durum),
+    ciz: (k) => `<span class="rozet r-${k.durum}">${ad(DURUMLAR, k.durum)}</span>
+      ${k.kayipSebebi ? `<div class="alt">${ad(KAYIP, k.kayipSebebi)}</div>` : ''}` },
+  { id: 'gonderim', baslik: 'Gönderim', anahtar: (k) => k.gonderim ?? '',
+    ciz: (k) => `<span class="mono">${k.gonderim ?? ''}</span>` },
+  { id: 'sonTemas', baslik: 'Son temas', anahtar: (k) => k.sonTemas ?? '',
+    ciz: (k) => `<span class="mono">${k.sonTemas ?? ''}</span>` },
+  { id: 'fiyat', baslik: 'Fiyat', anahtar: (k) => Number(k.fiyat) || 0,
+    ciz: (k) => `<span class="mono">${k.fiyat ? Number(k.fiyat).toLocaleString('tr-TR') + ' ₺' : ''}</span>` },
+  { id: 'siteDurumu', baslik: 'Site', anahtar: (k) => k.siteDurumu ?? '',
+    ciz: (k) => `<span class="alt">${k.siteDurumu ? ad(SITE, k.siteDurumu) : ''}</span>` },
+  { id: 'telefon', baslik: 'Telefon', anahtar: (k) => k.telefon ?? '',
+    ciz: (k) => `<span class="mono">${k.telefon ?? ''}</span>` },
+];
+
+const ad = (liste, k) => (liste.find((x) => x[0] === k) ?? ['', '—'])[1];
+
+let kayitlar = [];
+let filtre = 'hepsi';
+let arama = '';
+let secili = null;
+let sirala = { id: 'ad', yon: 1 };
+
+async function yukle() {
+  kayitlar = await (await fetch('/api/kayitlar')).json();
+  for (const k of kayitlar) if (!k.durum) k.durum = k.vazgecildi ? 'vazgecildi' : 'hazir';
+  ciz();
+}
+
+/** Arama: ad, sektor, sehir, telefon ve NOT icinde geciyor mu. */
+function eslesiyorMu(k) {
+  if (!arama) return true;
+  const havuz = [k.ad, k.sektor, k.il, k.ilce, k.telefon, k.not, ad(KAYIP, k.kayipSebebi)]
+    .filter(Boolean).join(' ').toLocaleLowerCase('tr');
+  return arama.split(/\s+/).every((p) => havuz.includes(p));
+}
+
+function gorunenler() {
+  const sutun = SUTUNLAR.find((s) => s.id === sirala.id);
+  return kayitlar
+    .filter((k) => (filtre === 'hepsi' || k.durum === filtre) && eslesiyorMu(k))
+    .sort((a, b) => {
+      const x = sutun.anahtar(a), y = sutun.anahtar(b);
+      const s = typeof x === 'number' ? x - y : String(x).localeCompare(String(y), 'tr');
+      return s * sirala.yon;
+    });
+}
+
+function ozetCiz() {
+  const say = (d) => kayitlar.filter((k) => k.durum === d).length;
+  const gonderilen = kayitlar.filter((k) =>
+    ['gonderildi', 'cevapsiz', 'cevap', 'gorusme', 'anlasildi', 'kaybedildi'].includes(k.durum)).length;
+  const cevaplayan = kayitlar.filter((k) =>
+    ['cevap', 'gorusme', 'anlasildi', 'kaybedildi'].includes(k.durum) && k.kayipSebebi !== 'cevapsiz').length;
+  const oran = gonderilen ? Math.round((cevaplayan / gonderilen) * 100) : 0;
+  const ciro = kayitlar.filter((k) => k.durum === 'anlasildi')
+    .reduce((t, k) => t + (Number(k.fiyat) || 0), 0);
+
+  document.getElementById('ozet').innerHTML = [
+    `<span><b>${kayitlar.length}</b> demo</span>`,
+    `<span><b>${gonderilen}</b> gönderildi</span>`,
+    `<span><b>${cevaplayan}</b> cevap · %${oran}</span>`,
+    `<span><b>${say('anlasildi')}</b> anlaşıldı</span>`,
+    ciro ? `<span><b>${ciro.toLocaleString('tr-TR')} ₺</b></span>` : '',
+  ].join('');
+}
+
+function filtreCiz() {
+  const say = (d) => kayitlar.filter((k) => k.durum === d).length;
+  const dugmeler = [['hepsi', 'Hepsi', kayitlar.length],
+    ...DURUMLAR.map(([k, e]) => [k, e, say(k)])].filter(([, , n]) => n > 0);
+  document.getElementById('filtreler').innerHTML = dugmeler
+    .map(([k, e, n]) => `<button class="filtre" data-f="${k}" aria-pressed="${filtre === k}">${e} <span style="opacity:.6">${n}</span></button>`)
+    .join('');
+}
+
+function basliklarCiz() {
+  document.getElementById('basliklar').innerHTML = SUTUNLAR.map((s) => {
+    const aktif = sirala.id === s.id;
+    const yon = aktif ? (sirala.yon === 1 ? 'ascending' : 'descending') : null;
+    const ok = aktif ? `<span class="ok">${sirala.yon === 1 ? '▲' : '▼'}</span>` : '';
+    return `<th${yon ? ` aria-sort="${yon}"` : ''}>
+      <button data-s="${s.id}">${s.baslik} ${ok}</button></th>`;
+  }).join('');
+}
+
+/**
+ * Tablo ve ozet — duzenleme bolmesine DOKUNMUYOR.
+ *
+ * Onceki surumde kaydetme sonrasi bolme de yeniden ciziliyordu. Not
+ * yazarken 400 ms duraklamak yetiyordu: innerHTML degisiyor, textarea
+ * yok olup yeniden dogyor, odak ve imlec kayboluyordu. Yazmaya devam
+ * etmek icin her seferinde tekrar tiklamak gerekiyordu.
+ *
+ * Artik bolme SADECE secim degistiginde yeniden ciziliyor.
+ */
+function tabloCiz() {
+  ozetCiz(); filtreCiz(); basliklarCiz();
+  const liste = gorunenler();
+  document.getElementById('bos').hidden = liste.length > 0;
+
+  document.getElementById('satirlar').innerHTML = liste.map((k) =>
+    `<tr data-k="${k.kimlik}" aria-selected="${secili === k.kimlik}">` +
+    SUTUNLAR.map((s) => `<td>${s.ciz(k)}</td>`).join('') + '</tr>').join('');
+
+  document.getElementById('govde').classList.toggle('acik', Boolean(secili));
+}
+
+/** Tam cizim: tablo + bolme. Secim degistiginde cagriliyor. */
+function ciz() {
+  tabloCiz();
+  if (secili) duzenCiz(kayitlar.find((k) => k.kimlik === secili));
+}
+
+function duzenCiz(k) {
+  if (!k) return;
+  const sec = (liste, deger) => liste
+    .map(([v, e]) => `<option value="${v}"${(deger ?? '') === v ? ' selected' : ''}>${e}</option>`).join('');
+
+  document.getElementById('duzen').innerHTML = `<div class="duzen-ic">
+    <button class="kapat" id="kapat" title="Kapat">×</button>
+    <h2>${k.ad}</h2>
+    <div class="alt">${k.sektor ?? ''}</div>
+
+    <label>Durum</label>
+    <select data-a="durum">${sec(DURUMLAR, k.durum)}</select>
+    <label>Gönderim tarihi</label>
+    <input type="date" data-a="gonderim" value="${k.gonderim ?? ''}">
+    <label>Son temas</label>
+    <input type="date" data-a="sonTemas" value="${k.sonTemas ?? ''}">
+    <label>Kayıp sebebi</label>
+    <select data-a="kayipSebebi">${sec(KAYIP, k.kayipSebebi)}</select>
+    <label>Anlaşılan fiyat (₺)</label>
+    <input type="number" data-a="fiyat" value="${k.fiyat ?? ''}" placeholder="20000">
+    <label>Site durumu</label>
+    <select data-a="siteDurumu">${sec(SITE, k.siteDurumu)}</select>
+    <label>Site adresi</label>
+    <input type="url" data-a="siteUrl" value="${k.siteUrl ?? ''}" placeholder="https://">
+    <label>Not</label>
+    <textarea data-a="not" placeholder="Ne dedi, ne konuşuldu…">${k.not ?? ''}</textarea>
+
+    <div class="baglar">
+      <a href="${k.demoUrl}" target="_blank" rel="noopener">Demo →</a>
+      ${k.mapsUrl ? `<a href="${k.mapsUrl}" target="_blank" rel="noopener">Maps →</a>` : ''}
+      ${k.whatsapp ? `<a href="https://wa.me/${k.whatsapp.replace(/\D/g, '')}" target="_blank" rel="noopener">WhatsApp →</a>` : ''}
+      ${k.siteUrl ? `<a href="${k.siteUrl}" target="_blank" rel="noopener">Site →</a>` : ''}
+    </div>
+    <div class="kayit-bilgi" id="kayitBilgi"></div>
+  </div>`;
+
+  // Dar ekranda panel tablonun ALTINDA kaliyor; yapiskan konumlandirma
+  // orada ise yaramiyor, o yuzden gorunume kaydiriyoruz.
+  if (window.matchMedia('(max-width: 62rem)').matches) {
+    document.getElementById('duzen').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+let zaman;
+function kaydet(kimlik, alan, deger) {
+  const kayit = kayitlar.find((k) => k.kimlik === kimlik);
+  kayit[alan] = deger;
+  clearTimeout(zaman);
+  zaman = setTimeout(async () => {
+    await fetch('/api/kayit/' + encodeURIComponent(kimlik), {
+      method: 'PUT', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ [alan]: deger }),
+    });
+    const bilgi = document.getElementById('kayitBilgi');
+    if (bilgi) { bilgi.textContent = 'kaydedildi'; setTimeout(() => { bilgi.textContent = ''; }, 1400); }
+    tabloCiz();   // bolme DEGIL — odak korunuyor
+  }, 400);
+}
+
+document.addEventListener('click', (e) => {
+  const s = e.target.closest('th button');
+  if (s) {
+    // Ayni sutuna tekrar tiklanirsa yon degisiyor.
+    sirala = sirala.id === s.dataset.s ? { id: s.dataset.s, yon: -sirala.yon } : { id: s.dataset.s, yon: 1 };
+    ciz(); return;
+  }
+  const f = e.target.closest('.filtre');
+  if (f) { filtre = f.dataset.f; ciz(); return; }
+  if (e.target.id === 'kapat') { secili = null; ciz(); return; }
+  const satir = e.target.closest('tr[data-k]');
+  if (satir) { secili = satir.dataset.k; ciz(); }
+});
+
+document.getElementById('ara').addEventListener('input', (e) => {
+  arama = e.target.value.trim().toLocaleLowerCase('tr');
+  ciz();
+});
+
+document.addEventListener('input', (e) => {
+  const a = e.target.dataset?.a;
+  if (a && secili) kaydet(secili, a, e.target.value);
+});
+document.addEventListener('change', (e) => {
+  const a = e.target.dataset?.a;
+  if (a && secili) kaydet(secili, a, e.target.value);
+});
+// Esc paneli kapatiyor.
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && secili && e.target.tagName !== 'TEXTAREA') { secili = null; ciz(); }
+});
+
+/*
+  Yapiskan konumlarin dayanagi: baslik cubugunun olculen yuksekligi.
+  ResizeObserver, pencere daraldiginda cubuk satir atlarsa da yakaliyor.
+*/
+const tepeOgesi = document.querySelector('.tepe');
+const tepeBoyunuOlc = () =>
+  document.documentElement.style.setProperty('--tepe-boy', tepeOgesi.offsetHeight + 'px');
+new ResizeObserver(tepeBoyunuOlc).observe(tepeOgesi);
+tepeBoyunuOlc();
+
+yukle();
+</script>
+</body>
+</html>

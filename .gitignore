@@ -1,0 +1,89 @@
+node_modules/
+
+# Sirlar
+.env
+.env.local
+.env.*.local
+
+# Prospect ciktilari — ASLA commit etme.
+# Icinde isletme listeleri ve iletisim bilgileri var; hem is sirri
+# hem KVKK acisindan repoya girmemesi gereken veri.
+out/
+tools/prospect/out/
+
+# Panel durum verisi — ayni sebeple commit edilmez.
+# Icinde hangi isletmeyle ne konusuldugu, anlasilan fiyatlar ve
+# iletisim gecmisi var.
+tools/panel/veri/
+
+# Build
+dist/
+.next/
+.turbo/
+*.tsbuildinfo
+
+# Sistem
+.DS_Store
+Thumbs.db
+*.log
+
+# Dışarıdan gelen ham veri (Search Console export vb.)
+veri/
+
+# Vercel
+.vercel/
+
+.vercel
+
+# ═══════════════════════════════════════════════════════════════
+# AÇIK KAYNAK SINIRI — buradan aşağısı repoya ASLA girmez
+# ═══════════════════════════════════════════════════════════════
+
+# Gerçek işletme verisi. Üçüncü kişilerin adı, telefonu, adresi ve
+# Google yorumları (yazar adı + profil linkiyle birlikte) burada.
+# KVKK kapsamında kişisel veri.
+# Yerine veriler.ornek/ içindeki hayali fikstürler yayınlanıyor.
+apps/demo/src/veriler/
+
+# İşletme fotoğrafları — Google ve Instagram'dan indirildi.
+# Telif bize ait değil, yayınlanamaz.
+apps/demo/public/foto/
+
+# Bilal'in kendi pazarlama sitesi. Çerçevenin parçası değil:
+# portre, vaka çalışmaları, kişisel iletişim bilgileri.
+# Kendi özel deposuna taşınacak.
+apps/pazarlama/
+
+# Vaka çalışması ekran görüntüsü aracı. Çıktısını apps/pazarlama/'ya
+# yazıyor ve --hepsi listesi gerçek müşteri sitelerinden oluşuyor;
+# pazarlama sitesiyle birlikte taşınacak.
+tools/ekran/
+
+# Pazarlama sitesinin Vercel yapılandırması. apps/pazarlama/ repoda
+# olmadığı için bu dosya var olmayan bir workspace'i derlemeye
+# çalışıyor — klonlayan biri için kırık bir yapılandırmadan başka
+# anlamı yok. Siteyle birlikte taşınacak.
+vercel.pazarlama.json
+
+# Gönderilmiş demo adreslerinin yönlendirme tablosu. İçinde gerçek
+# müşteri slug'ları var, ama silinemez: linki kırmak müşteriyi
+# kaybetmenin en sessiz yolu. Yerelde kalıyor, next.config.ts yoksa
+# boş listeye düşüyor.
+apps/demo/eski-yollar.json
+
+# Kuru mod kalibrasyon fikstürü. Yayınlanan fixtures.mjs hayali;
+# kendi gerçek sitelerinle ölçek kalibrasyonu yapmak istersen bu
+# dosyayı oluştur, tarayıcı onu tercih eder.
+tools/prospect/src/fixtures.yerel.mjs
+
+# Denetçinin ürettiği geçici çıktılar
+tools/denetim/gecici/
+
+# Açık kaynak hazırlığının iç mutfağı: hangi kararın neden verildiği,
+# hangi müşteride ne öğrenildiği, yapılacaklar. Yayına çıkınca silinecek
+# geçici bir dosya — ama unutulup commit'lenmesin diye buraya alındı.
+ACIK-KAYNAK-DURUM.md
+
+# Yayınlanmaması gereken ama kaybedilmemesi gereken notlar:
+# kişisel Vercel proje adları, hesap kapsamı, tam deploy komutları.
+NOTLAR-YEREL.md

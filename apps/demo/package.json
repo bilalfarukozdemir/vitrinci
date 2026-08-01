@@ -1,0 +1,25 @@
+{
+  "name": "@studio/demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Prospect demo üreteci — taslak veriden site. Satış kapanınca aynı kod gerçek site olur.",
+  "scripts": {
+    "dev": "next dev --port 3001",
+    "build": "next build",
+    "start": "next start --port 3001",
+    "ekle": "node scripts/ekle.mjs"
+  },
+  "dependencies": {
+    "@studio/data": "*",
+    "@studio/seo": "*",
+    "@studio/ui": "*",
+    "next": "^15.5.4",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.9",
+    "@types/react-dom": "^19.1.7"
+  },
+  "type": "module"
+}

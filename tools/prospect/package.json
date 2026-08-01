@@ -1,0 +1,17 @@
+{
+  "name": "@studio/prospect",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Nis x sehir bazli isletme listesi cikarip sitelerini denetleyen, firsat skoruna gore siralayan outbound motoru.",
+  "engines": {
+    "node": ">=22.6"
+  },
+  "scripts": {
+    "tara": "node src/index.mjs",
+    "yardim": "node src/index.mjs --yardim"
+  },
+  "dependencies": {
+    "@studio/data": "*"
+  }
+}

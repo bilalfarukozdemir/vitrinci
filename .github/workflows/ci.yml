@@ -1,0 +1,70 @@
+# CI — testler, tip kontrolu ve yayin kapisi.
+#
+# ─────────────────────────────────────────────────────────────────────
+# BU CI'IN NE KANITLAYAMADIGI
+#
+# `yayina-hazir` iki denetim kosuyor: icerik (sizinti) ve yapi (temiz klon).
+# Icerik denetimi yasakli terimleri YEREL gercek veriden turetiyor — demo
+# dosyalari, panel durumlari, tarama ciktisi. Ucu de .gitignore'da, yani
+# BURADA YOKLAR.
+#
+# Sonuc: CI'da sizinti denetimi yalnizca kalip kurallarini (telefon bicimi,
+# e-posta, API anahtari, Maps kimligi) kosabiliyor. Gercek isletme ADLARI
+# ve alan adlari hic karsilastirilmiyor.
+#
+# Bu bir arıza degil, yapinin sonucu — ve gizlenmiyor: sizinti kismi
+# kostugunda 2 ile cikiyor, `yayina-hazir` de sonuc satirinda "YAPI HAZIR —
+# ICERIK DENETIMI YARIM KALDI" yaziyor. Is akisi yesil kaliyor cunku o
+# dosyalar buraya konamaz, ama yesil rozet "yayina hazir" DEMEK DEGIL.
+#
+# Tam denetim yalnizca gercek verinin durdugu makinede anlamli.
+# ─────────────────────────────────────────────────────────────────────
+
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  kontrol:
+    name: Testler + tip (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 22 alt sinir (bayraksiz tip soyma 22.18'de geldi), 24 onerilen.
+        # Ikisi de kosuyor cunku alt sinirin dogru oldugunu iddia etmek
+        # yetmez, sinanmasi lazim.
+        node: ['22', '24']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - run: npm ci
+      - run: npm run kontrol
+
+  yayina-hazir:
+    name: Yayın kapısı
+    runs-on: ubuntu-latest
+    steps:
+      # temiz-clone `git ls-files` kullaniyor — calisma agacinda .git sart.
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - run: npm ci
+
+      # Icinde temiz klon testi var: yayinlanacak dosyalari gecici bir
+      # dizine cikarip sifirdan `npm install` + `kontrol` + `ornek` + `build`
+      # kosuyor. Yani bu adim ayni zamanda README'deki kurulum talimatinin
+      # dogru oldugunun testi.
+      - run: npm run yayina-hazir

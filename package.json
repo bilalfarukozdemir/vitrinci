@@ -1,0 +1,31 @@
+{
+  "name": "vitrinci",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sitesi olmayan yerel işletmeyi bul, demo üret, teklif gönder, takip et. Build the shopfront a local business never had.",
+  "license": "MIT",
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "tools/*"
+  ],
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "test": "node --test \"packages/*/test/*.test.ts\" \"tools/*/test/*.test.mjs\" \"apps/*/test/*.test.mjs\"",
+    "tip": "tsc --noEmit -p packages/data/tsconfig.json && tsc --noEmit -p packages/seo/tsconfig.json && tsc --noEmit -p packages/ui/tsconfig.json",
+    "kontrol": "npm run test && npm run tip",
+    "ornek": "node apps/demo/scripts/ornek.mjs",
+    "tara": "node tools/prospect/src/index.mjs",
+    "tara:kuru": "node tools/prospect/src/index.mjs --nis=insaat --sehir=Düzce --kuru --hiz-yok",
+    "panel": "node tools/panel/sunucu.mjs",
+    "sizinti": "node tools/denetim/sizinti.mjs",
+    "temiz-clone": "node tools/denetim/temiz-clone.mjs",
+    "yayina-hazir": "node tools/denetim/yayina-hazir.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "typescript": "^5.9.3"
+  }
+}

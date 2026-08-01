@@ -1,0 +1,13 @@
+{
+  "name": "@studio/seo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Katman 1 — metadata, JSON-LD, sitemap, hreflang. Hepsi şemadan deterministik türer.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@studio/data": "*"
+  }
+}

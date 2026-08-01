@@ -1,0 +1,13 @@
+{
+  "name": "@studio/ui",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Katman 1 — marka token'ları. Bloklar renk/font hardcode etmez, buradan okur.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@studio/data": "*"
+  }
+}

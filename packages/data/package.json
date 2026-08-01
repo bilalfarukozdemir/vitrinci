@@ -1,0 +1,14 @@
+{
+  "name": "@studio/data",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Katman 0 — kanonik işletme şeması. Her artifact bu şekli okur.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./adapters/prospect": "./src/adapters/prospect.ts"
+  },
+  "dependencies": {
+    "zod": "^3.25.76"
+  }
+}
