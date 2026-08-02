@@ -532,3 +532,51 @@ test('teklif: abonelik yoksa fazladan teklif üretilmiyor', () => {
   const teklifler = ld['makesOffer'] as Record<string, any>[];
   assert.equal(teklifler.length, kavakdere.hizmetler.length);
 });
+
+/*
+   SABIT SAYFA ACIKLAMALARI.
+
+   Canli sitede /sss, /hakkinda ve /iletisim'in aciklamasi ilk iki kelime
+   disinda BIREBIR ayniydi: hepsi "<Sayfa adi> — <Isletme>." + isletmenin
+   genel ozeti. Anasayfanin aciklamasi da ayni cumleydi. Hicbir sey
+   kirilmiyordu, sadece dort sayfa Google'a ayni seyi soyluyordu.
+*/
+
+test('sabit sayfa: açıklamalar birbirinden ayrışıyor', () => {
+  const sayfalar = ['hakkinda', 'iletisim', 'sss'] as const;
+  const aciklamalar = sayfalar.map((s) => sabitSayfaMetadata(kavakdere, s, 'tr').description);
+
+  assert.equal(new Set(aciklamalar).size, sayfalar.length);
+
+  // Anasayfayla da ayni olmamali — eski hatada oydu.
+  const ana = anasayfaMetadata(kavakdere, 'tr').description;
+  for (const a of aciklamalar) assert.notEqual(a, ana);
+});
+
+test('sabit sayfa: açıklama sayfanın kendi içeriğinden geliyor', () => {
+  const sss = sabitSayfaMetadata(kavakdere, 'sss', 'tr').description;
+  const ilkSoru = kavakdere.sss[0]!.soru as string;
+  assert.ok(sss.includes(ilkSoru.slice(0, 20)), `SSS açıklamasında ilk soru yok: ${sss}`);
+
+  const iletisim = sabitSayfaMetadata(kavakdere, 'iletisim', 'tr').description;
+  const il = kavakdere.adresler[0]!.il!;
+  assert.ok(iletisim.includes(il), `İletişim açıklamasında il yok: ${iletisim}`);
+});
+
+test('sabit sayfa: elle yazılan açıklama üretilene üstün geliyor', () => {
+  const elleYazili = isletmeTaslakSemasi.parse({
+    ...JSON.parse(JSON.stringify(kavakdere)),
+    seo: { ...kavakdere.seo, sayfaAciklamalari: { iletisim: 'Cumartesi de açığız.' } },
+  });
+  const d = sabitSayfaMetadata(elleYazili, 'iletisim', 'tr').description;
+  assert.ok(d.includes('Cumartesi de açığız.'), d);
+});
+
+test('sabit sayfa: malzeme yoksa işletme özetine düşüyor, boş kalmıyor', () => {
+  const sssiz = isletmeTaslakSemasi.parse({
+    ...JSON.parse(JSON.stringify(kavakdere)),
+    sss: [],
+  });
+  const d = sabitSayfaMetadata(sssiz, 'sss', 'tr').description;
+  assert.ok(d.length >= ESIKLER.aciklamaEnAz, `çok kısa: ${d}`);
+});

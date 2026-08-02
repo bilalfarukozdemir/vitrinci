@@ -173,6 +173,28 @@ export const seoSemasi = z.object({
   indekslenebilir: z.boolean().default(false),
   gaOlcumId: z.string().optional(),
   gscDogrulama: z.string().optional(),
+
+  /**
+   * Sabit sayfalarin meta aciklamalarini ELLE ezmek icin.
+   *
+   * Bos birakilabilir ve cogu zaman birakilmali: @studio/seo bu sayfalar
+   * icin aciklamayi sayfanin KENDI iceriginden turetiyor (SSS'te ilk
+   * sorular, iletisimde adres, hakkindada uzun aciklama). Burasi o
+   * varsayilanin yetmedigi tek tuk durum icin.
+   *
+   * Neden onemli: bu isaretlemenin buyuk kismi OTOMATIK URETILEN demolara
+   * gidiyor, kimse elle aciklama yazmiyor. Elle yazmayi zorunlu kilan bir
+   * cozum, pratikte hic uygulanmayan bir cozum olurdu.
+   */
+  sayfaAciklamalari: z
+    .object({
+      hakkinda: yerelliMetin.optional(),
+      iletisim: yerelliMetin.optional(),
+      galeri: yerelliMetin.optional(),
+      sss: yerelliMetin.optional(),
+      blog: yerelliMetin.optional(),
+    })
+    .optional(),
 });
 
 /**

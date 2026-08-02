@@ -274,6 +274,61 @@ export function bolgeSlugu(bolge: Bolge): string {
 
 // ---------------------------------------------------------------- sabit sayfalar
 
+/**
+ * Sabit sayfanin KENDI icerigin­den aciklama uretir.
+ *
+ * BUNUN SEBEBI SOMUT: onceki hal her sabit sayfaya "<Sayfa adi> —
+ * <Isletme>." + isletmenin genel ozetini yaziyordu. Sonuc olarak /sss,
+ * /hakkinda ve /iletisim'in aciklamasi ilk iki kelime disinda BIREBIR
+ * ayniydi — ustelik anasayfanin aciklamasi da ayni cumleydi. Yeni bir
+ * sitede birbirine benzeyen sayfalar "Tarandi – su anda dizine
+ * eklenmedi" durumunun bilinen sebeplerinden biri.
+ *
+ * Her sayfa icin o sayfada GERCEKTEN duran malzeme kullaniliyor:
+ * SSS'te sorular, iletisimde adres, hakkindada uzun aciklama, galeride
+ * fotograf sayisi. Boylece elle hicbir sey yazilmadan aciklamalar
+ * birbirinden ayrisiyor — otomatik uretilen demolar icin tek uygulanabilir
+ * cozum bu.
+ *
+ * Malzeme yoksa (orn. SSS'i olmayan bir isletme) eski davranisa dusuyor;
+ * bos aciklamadan jenerik aciklama iyidir.
+ */
+function sabitSayfaMalzemesi(
+  isletme: IsletmeTaslak,
+  sayfaAnahtari: keyof typeof SAYFA_ADLARI,
+  dil: Dil,
+): string | undefined {
+  const varsayilan = isletme.diller.varsayilan;
+  const cevir = (d: Parameters<typeof metin>[0]) => metin(d, dil, varsayilan);
+
+  switch (sayfaAnahtari) {
+    case 'hakkinda':
+      // Bos dizge undefined'a cevriliyor ki cagiran taraftaki || zinciri calissin.
+      return cevir(isletme.uzunAciklama) || undefined;
+
+    case 'sss': {
+      // Ilk sorular hem sayfaya ozgu hem de aranan seye benziyor —
+      // insanlar Google'a soruyu oldugu gibi yaziyor.
+      const sorular = isletme.sss.map((s) => cevir(s.soru)).filter(Boolean).slice(0, 3);
+      return sorular.length ? sorular.join(' ') : undefined;
+    }
+
+    case 'iletisim': {
+      const adres = isletme.adresler[0];
+      const yer = [adres?.ilce, adres?.il].filter(Boolean).join(', ') || anaSehir(isletme);
+      return yer ? `${yer} — adres, telefon ve çalışma saatleri.` : undefined;
+    }
+
+    case 'galeri': {
+      const n = isletme.galeri.length;
+      return n ? `${n} fotoğraf.` : undefined;
+    }
+
+    default:
+      return undefined;
+  }
+}
+
 export function sabitSayfaMetadata(
   isletme: IsletmeTaslak,
   sayfaAnahtari: keyof typeof SAYFA_ADLARI,
@@ -291,8 +346,26 @@ export function sabitSayfaMetadata(
     dil,
   );
 
+  /*
+     Sira: elle yazilan > sayfaya ozgu malzeme > isletme ozeti.
+     Ucuncusu son care; oraya dusen sayfalarin aciklamasi birbirine
+     benziyor ve bu bilinerek kabul ediliyor — alternatifi bos aciklama.
+
+     `??` DEGIL `||` — `metin()` bulamadigi degere BOS DIZGE donuyor,
+     undefined degil. `??` bos dizgede devam etmedigi icin ilk secenek
+     her zaman kazaniyor ve aciklama sadece basliktan ibaret kaliyordu.
+     Bunu "aciklamalar birbirinden ayrisiyor" testi YAKALAMADI: uc sayfa
+     baslikta zaten farkli oldugu icin test dogru sebeple degil, yanlis
+     sebeple geciyordu. Ikinci test (icerik gercekten iceride mi)
+     yakaladi.
+  */
   const aciklama = aciklamaHazirla(
-    [`${sayfaAdi} — ${isletme.ad}.`, metin(isletme.ozet, dil, varsayilan)],
+    [
+      `${sayfaAdi} — ${isletme.ad}.`,
+      metin(isletme.seo.sayfaAciklamalari?.[sayfaAnahtari], dil, varsayilan) ||
+        sabitSayfaMalzemesi(isletme, sayfaAnahtari, dil) ||
+        metin(isletme.ozet, dil, varsayilan),
+    ],
     isletme,
     dil,
   );
