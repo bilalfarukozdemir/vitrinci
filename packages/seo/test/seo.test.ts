@@ -580,3 +580,31 @@ test('sabit sayfa: malzeme yoksa işletme özetine düşüyor, boş kalmıyor', 
   const d = sabitSayfaMetadata(sssiz, 'sss', 'tr').description;
   assert.ok(d.length >= ESIKLER.aciklamaEnAz, `çok kısa: ${d}`);
 });
+
+test('iletişim: adres yoksa açıklama "adres" vaat etmiyor', () => {
+  const adressiz = isletmeTaslakSemasi.parse({
+    ...JSON.parse(JSON.stringify(kavakdere)),
+    adresler: [],
+    hizmetVerilenBolgeler: [{ ad: 'Düzce', tur: 'il', il: 'Düzce' }],
+  });
+  const d = sabitSayfaMetadata(adressiz, 'iletisim', 'tr').description;
+  assert.ok(d.includes('Düzce'), d);
+  assert.ok(!d.includes('adres'), `adresi olmayan sayfa adres vaat ediyor: ${d}`);
+
+  // Adresi olanda kelime geri geliyor.
+  const d2 = sabitSayfaMetadata(kavakdere, 'iletisim', 'tr').description;
+  assert.ok(d2.includes('adres'), d2);
+});
+
+test('bölge sırası: ilk bölge başlıklara giriyor', () => {
+  const cokBolgeli = isletmeTaslakSemasi.parse({
+    ...JSON.parse(JSON.stringify(kavakdere)),
+    adresler: [],
+    hizmetVerilenBolgeler: [
+      { ad: 'Düzce', tur: 'il', il: 'Düzce' },
+      { ad: 'Türkiye', tur: 'ulke' },
+    ],
+  });
+  // anaSehir listenin ilkini alıyor; sıra değişirse başlıklar da değişir.
+  assert.ok(anasayfaMetadata(cokBolgeli, 'tr').title.includes('Düzce'));
+});

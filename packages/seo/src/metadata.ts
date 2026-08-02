@@ -314,9 +314,22 @@ function sabitSayfaMalzemesi(
     }
 
     case 'iletisim': {
+      /*
+         "Adres" kelimesi ancak GERCEKTEN adres varsa geciyor.
+
+         Onceki hal adresi olmayan isletmede de "adres, telefon ve
+         calisma saatleri" diyordu — sayfada adres yokken arama
+         sonucunda adres vaat etmek, tiklayani bos bir sayfaya
+         gonderiyor. Ofissiz calisanlarda (bu deponun kullanicilarinin
+         cogu) yanlis olan varsayilan buydu.
+      */
       const adres = isletme.adresler[0];
-      const yer = [adres?.ilce, adres?.il].filter(Boolean).join(', ') || anaSehir(isletme);
-      return yer ? `${yer} — adres, telefon ve çalışma saatleri.` : undefined;
+      const acikAdres = [adres?.ilce, adres?.il].filter(Boolean).join(', ');
+      if (acikAdres) return `${acikAdres} — adres, telefon ve çalışma saatleri.`;
+
+      const bolgeler = isletme.hizmetVerilenBolgeler.map((b) => b.ad).filter(Boolean).slice(0, 3);
+      if (!bolgeler.length) return undefined;
+      return `${bolgeler.join(', ')} — telefon, WhatsApp ve çalışma saatleri.`;
     }
 
     case 'galeri': {
