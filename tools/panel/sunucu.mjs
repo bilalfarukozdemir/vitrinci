@@ -29,7 +29,7 @@
  *              .gitignore'da; repoya girmiyor.
  */
 import { createServer } from 'node:http';
-import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync, statSync, rmSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -128,8 +128,74 @@ function durumlariOku() {
   }
 }
 
+/**
+ * ─────────────────────────────────────────────────────────────────────
+ * YEDEKLEME
+ *
+ * `durumlar.json` .gitignore'da — yani git onu KORUMUYOR. Tek kopyasi
+ * diskte duruyor ve icinde 24 kaydin butun konusma gecmisi var; kaybi
+ * geri getirilemez. Bir kez bir testin bir notu sildigi de oldu.
+ *
+ * Bu yuzden her yazmadan ONCE mevcut hal `veri/yedek/` altina
+ * kopyalanıyor. Klasor `veri/` icinde oldugu icin gitignore'a otomatik
+ * takiliyor — repoya asla gitmiyor, ek kural gerekmiyor.
+ *
+ * IKI SINIRLAMA, ikisi de bilerek:
+ *
+ *   Sik yazmada bogulmasin  Panel not yazarken 400 ms araliklarla
+ *                           kaydediyor. En yeni yedek 2 dakikadan
+ *                           genc ise yenisi alinmiyor; yoksa tek bir
+ *                           not yazma seansi yuzlerce dosya uretirdi.
+ *   Sinirsiz buyumesin      En yeni 40 yedek tutuluyor, gerisi siliniyor.
+ *
+ * Yedekleme HICBIR ZAMAN kaydetmeyi engellemiyor: hata olursa uyari
+ * basiliyor ve yazma devam ediyor. Yedek bir guvenlik agi, bir kapi degil.
+ * ─────────────────────────────────────────────────────────────────────
+ */
+const yedekDizin = resolve(veriDizin, 'yedek');
+const YEDEK_ARALIK_MS = 2 * 60 * 1000;
+const YEDEK_SAYISI = 40;
+
+/** Yedek dosyalari, en yeni basta. */
+function yedekler() {
+  if (!existsSync(yedekDizin)) return [];
+  return readdirSync(yedekDizin)
+    .filter((d) => d.startsWith('durumlar-') && d.endsWith('.json'))
+    .sort()
+    .reverse();
+}
+
+function yedekAl() {
+  if (!existsSync(durumDosya)) return; // ilk yazma, yedeklenecek bir sey yok
+  try {
+    mkdirSync(yedekDizin, { recursive: true });
+
+    const enYeni = yedekler()[0];
+    if (enYeni) {
+      const yas = Date.now() - statSync(resolve(yedekDizin, enYeni)).mtimeMs;
+      if (yas < YEDEK_ARALIK_MS) return;
+    }
+
+    // Dosya adi ISO damgasi — alfabetik sirasi zaman sirasiyla ayni,
+    // yani `sort()` tarih siralamasi icin yeterli.
+    const damga = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    writeFileSync(
+      resolve(yedekDizin, `durumlar-${damga}.json`),
+      readFileSync(durumDosya, 'utf8'),
+      'utf8',
+    );
+
+    for (const eski of yedekler().slice(YEDEK_SAYISI)) {
+      rmSync(resolve(yedekDizin, eski), { force: true });
+    }
+  } catch (hata) {
+    console.warn('  ⚠ yedek alınamadı:', hata?.message ?? hata);
+  }
+}
+
 function durumlariYaz(veri) {
   mkdirSync(veriDizin, { recursive: true });
+  yedekAl();
   writeFileSync(durumDosya, JSON.stringify(veri, null, 2), 'utf8');
 }
 
@@ -225,9 +291,17 @@ sunucu.on('error', (hata) => {
 // 127.0.0.1 — 0.0.0.0 DEGIL. Ayni agdaki telefon bile ulasamaz.
 sunucu.listen(PORT, '127.0.0.1', () => {
   const sayi = demolariOku().length;
+  const y = yedekler();
+  // Yedegin sessizce calismasi ise yaramaz — calistigi GORUNMELI,
+  // yoksa bir gun gerektiginde "acaba var miydi" diye bakilir.
+  const yedekSatir = y.length
+    ? `${y.length} yedek · en yenisi ${y[0].slice(9, 19)} ${y[0].slice(20, 25).replace('-', ':')}`
+    : 'yedek yok — ilk kayıtta oluşacak';
+
   console.log(`
   Panel açıldı:  http://127.0.0.1:${PORT}
   ${sayi} demo okundu · durumlar: tools/panel/veri/durumlar.json
+  ${yedekSatir}
 
   Sadece bu bilgisayardan erişilebilir. Kapatmak için Ctrl+C.
 `);
