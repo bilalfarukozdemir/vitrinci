@@ -12,6 +12,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--workspace=@studio/musteri-ornek"],
       "port": 3002
+    },
+    {
+      "name": "pazarlama",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--workspace=@studio/pazarlama"],
+      "port": 3000
     }
   ]
 }
