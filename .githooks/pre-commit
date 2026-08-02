@@ -1,0 +1,31 @@
+#!/bin/sh
+#
+# Her commit'ten once sizinti taramasi.
+#
+# NEDEN KANCA: tarama zaten vardi ve calistiriliyordu, ama CALISTIRMAYI
+# HATIRLAMAYA bagliydi. Hassas veri sizintisi tam olarak bir kez
+# unutuldugunda olan bir sey — ve unutulacagi gun, aceleyle commit
+# atilan gundur. Bu yuzden karar insandan alindi.
+#
+# NEDEN SADECE `sizinti`: `yayina-hazir` bunu da iceriyor ama icinde
+# temiz klon kurulumu ve build var, ~2,5 dakika suruyor. Her commit'te
+# 2,5 dakika bekleyen insan kancayi --no-verify ile atlar; o da kancanin
+# olmamasindan kotudur. Tek basina tarama ~6 saniye.
+#
+# Yapisal kontroller (kilit dosyasi, yayin listesi, temiz klon) push
+# oncesi `npm run yayina-hazir` ile ayrica calisiyor.
+#
+# KURULUM: npm run kanca-kur
+# ATLAMA : git commit --no-verify   (gercekten emin oldugunda)
+
+echo "sızıntı taraması…"
+
+if ! npm run --silent sizinti; then
+  echo ""
+  echo "  ✘ COMMIT DURDURULDU — sızıntı taraması geçmedi."
+  echo ""
+  echo "    Yukarıdaki bulguları temizle, sonra tekrar dene."
+  echo "    Yanlış alarm olduğuna eminsen: git commit --no-verify"
+  echo ""
+  exit 1
+fi

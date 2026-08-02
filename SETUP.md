@@ -234,3 +234,30 @@ gate before a commit that goes public.
 If it reports **partial audit**, the content half did not really run — that
 happens wherever the local data is absent, such as CI. A partial pass is not a
 publishing decision. Run it once on the machine that holds the real data.
+
+### Don't rely on remembering
+
+```bash
+npm run kanca-kur
+```
+
+Sets `core.hooksPath` so that **every commit runs the leak scan first** and
+refuses the commit if anything is found.
+
+Git will not enable a repository's hooks by itself — a repo that could run
+arbitrary code the moment you cloned it would be a security hole. So this is
+one command per clone, and it is worth running on the first day.
+
+The hook runs the scan **only** (about six seconds), not the full
+`yayina-hazir`. That is deliberate: the full gate takes around two minutes,
+and a two-minute wait on every commit gets bypassed with `--no-verify` within
+a week. A check that survives is worth more than a thorough one that doesn't.
+Run `yayina-hazir` before pushing.
+
+If the hook ever blocks something you are certain is a false positive:
+
+```bash
+git commit --no-verify
+```
+
+Ask yourself twice before typing that.
