@@ -144,6 +144,59 @@ function fiyatOzelligi(fiyat: Hizmet['fiyat']): Ld | undefined {
   });
 }
 
+/** UN/CEFACT birim kodlari — schema.org sayisal periyodu bu kodlarla okuyor. */
+const PERIYOT_KODU = { ay: 'MON', yil: 'ANN' } as const;
+
+/**
+ * Abonelik fiyatini isaretlemeye cevirir.
+ *
+ * `UnitPriceSpecification` + `referenceQuantity` schema.org'un tekrar eden
+ * odeme icin ongordugu yapi: "950 TRY / 1 MON". Duz `price` yazilsaydi
+ * tek seferlik 950 TL gibi okunurdu — mevcut hatanin aynadaki hali.
+ *
+ * Kurulum bedeli varsa ikisi bir `CompoundPriceSpecification` icinde
+ * birlesiyor; o tip tam olarak "birlikte gecerli olan farkli bilesenler"
+ * icin var. Bilesenleri ayirt eden sey `referenceQuantity`: olan tekrar
+ * ediyor, olmayan bir kerelik.
+ *
+ * NOT: schema.org'un `priceType` listesinde "kurulum" karsiligi bir deger
+ * YOK (ListPrice, MSRP, SalePrice…). Uydurmak yerine `description` ile
+ * insan tarafina yaziyoruz — makine tarafi zaten miktardan anliyor.
+ */
+function abonelikOzelligi(fiyat: Hizmet['fiyat']): Ld | undefined {
+  const abonelik = fiyat?.abonelik;
+  if (!abonelik) return undefined;
+
+  const paraBirimi = fiyat.paraBirimi;
+  const tekrarEden = temizle({
+    '@type': 'UnitPriceSpecification',
+    price: abonelik.tutar,
+    priceCurrency: paraBirimi,
+    referenceQuantity: {
+      '@type': 'QuantitativeValue',
+      value: 1,
+      unitCode: PERIYOT_KODU[abonelik.periyot],
+    },
+    description: abonelik.periyot === 'ay' ? 'Aylık' : 'Yıllık',
+  });
+
+  if (abonelik.kurulum === undefined) return tekrarEden;
+
+  return temizle({
+    '@type': 'CompoundPriceSpecification',
+    priceCurrency: paraBirimi,
+    priceComponent: [
+      temizle({
+        '@type': 'UnitPriceSpecification',
+        price: abonelik.kurulum,
+        priceCurrency: paraBirimi,
+        description: 'Kurulum, bir kez',
+      }),
+      tekrarEden,
+    ],
+  });
+}
+
 /**
  * Ana isletme isaretlemesi. Anasayfaya basilir.
  * Yerel aramalarda ve harita paketinde en cok is yapan tek sinyal bu.
@@ -209,13 +262,28 @@ export function isletmeLd(isletme: IsletmeTaslak, dil: Dil, baglam: RotaBaglami)
     // `priceSpecification.minPrice` kullaniliyor: elimizdeki rakam bir
     // taban ("… TL'den baslıyor"), sabit fiyat degil. Duz `price` yazmak
     // Google'a sabit fiyat soyler ve yaniltir.
-    makesOffer: isletme.hizmetler.map((h) =>
-      temizle({
-        '@type': 'Offer',
-        itemOffered: { '@type': 'Service', name: metin(h.ad, dil, varsayilan) },
-        priceSpecification: fiyatOzelligi(h.fiyat),
-      }),
-    ),
+    /*
+       Bir hizmetin iki satin alma yolu varsa IKI Offer cikiyor, tek
+       Offer'da iki fiyat degil. Aradaki fark anlamsal: tek teklifte iki
+       priceSpecification "ikisi birden gecerli" demek, iki teklif
+       "birini sec" demek. Bizde ikincisi dogru — musteri ya aylik oduyor
+       ya tek seferlik.
+    */
+    makesOffer: isletme.hizmetler.flatMap((h) => {
+      const hizmet = { '@type': 'Service', name: metin(h.ad, dil, varsayilan) };
+      const abonelik = abonelikOzelligi(h.fiyat);
+
+      return [
+        ...(abonelik
+          ? [temizle({ '@type': 'Offer', itemOffered: hizmet, priceSpecification: abonelik })]
+          : []),
+        temizle({
+          '@type': 'Offer',
+          itemOffered: hizmet,
+          priceSpecification: fiyatOzelligi(h.fiyat),
+        }),
+      ];
+    }),
 
     aggregateRating: puanOzeti(isletme),
     sameAs: sosyalBaglantilar,

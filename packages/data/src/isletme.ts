@@ -48,11 +48,34 @@ export const bolgeSemasi = z.object({
   sayfaAc: z.boolean().default(false),
 });
 
+/**
+ * Tekrar eden odeme — WaaS/abonelik modeli.
+ *
+ * NEDEN AYRI BIR ALAN: `min`/`max` tek seferlik bir aralik anlatiyor.
+ * Ayni hizmet hem "18.000 TL'den baslayan proje" hem "4.000 kurulum +
+ * aylik 950" olarak satiliyorsa bu IKI FARKLI TEKLIF, tek fiyatin iki
+ * ucu degil. Tek alana sikistirilirsa yapisal veride yalnizca biri
+ * gorunur — ve pratikte gorunen, buyuk olan oluyor.
+ *
+ * `kurulum` bilerek burada: aylik fiyat tek basina yaziinca musteri
+ * ilk ay ne odeyecegini bilmiyor. Isaretlemede ikisi tek teklifin iki
+ * bileseni olarak duruyor.
+ */
+export const abonelikSemasi = z.object({
+  tutar: z.number().nonnegative(),
+  /** UN/CEFACT birim kodu uretiliyor: ay → MON, yil → ANN. */
+  periyot: z.enum(['ay', 'yil']).default('ay'),
+  /** Bir kerelik kurulum bedeli. Yoksa alan basilmiyor. */
+  kurulum: z.number().nonnegative().optional(),
+});
+
 export const fiyatSemasi = z.object({
   min: z.number().nonnegative().optional(),
   max: z.number().nonnegative().optional(),
   birim: z.string().optional(), // "m²", "adet", "proje"
   paraBirimi: z.string().default('TRY'),
+  /** Tekrar eden odeme secenegi. Tek seferlige EK, onun yerine degil. */
+  abonelik: abonelikSemasi.optional(),
   /** "Ücretsiz keşif, sabit fiyat" gibi fiyat yerine gecen mesaj. */
   not: yerelliMetin.optional(),
 });

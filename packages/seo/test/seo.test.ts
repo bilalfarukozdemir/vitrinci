@@ -471,3 +471,64 @@ test('kanonik: alan adı yoksa demo yer tutucusuna düşüyor', () => {
   const baglam = baglamOlustur(demoTaslak);
   assert.equal(kanonik({ tur: 'anasayfa' }, 'tr', baglam), 'https://demo.local/');
 });
+
+/*
+   ABONELIK FIYATI.
+
+   Bu testlerin sebebi somut: canli sitede aylik model isaretlemede HIC
+   YOKTU. Sayfada "950 TL/ay + 4.000 kurulum" yaziyordu, yapisal veride
+   sadece 18.000 vardi — yani makinelerin gordugu tek rakam pahali
+   olandi. Sessizce yanlis olan bir seydi, hicbir sey kirilmiyordu.
+*/
+
+const aylikli: IsletmeTaslak = isletmeTaslakSemasi.parse({
+  ...JSON.parse(JSON.stringify(kavakdere)),
+  hizmetler: [
+    {
+      slug: 'bakim',
+      ad: 'Bakım',
+      ozet: 'Aylık bakım ve tek seferlik kurulum.',
+      fiyat: {
+        min: 18000,
+        paraBirimi: 'TRY',
+        birim: 'proje',
+        abonelik: { tutar: 950, periyot: 'ay', kurulum: 4000 },
+      },
+    },
+  ],
+});
+
+test('teklif: aylık ve tek seferlik AYRI teklifler olarak çıkıyor', () => {
+  const ld = isletmeLd(aylikli, 'tr', baglamOlustur(aylikli));
+  const teklifler = ld['makesOffer'] as Record<string, any>[];
+
+  // Tek teklifte iki fiyat "ikisi birden geçerli" demek olurdu.
+  // Müşteri birini seçiyor, o yüzden iki teklif.
+  assert.equal(teklifler.length, 2);
+
+  const aylik = teklifler[0]!['priceSpecification'];
+  const tek = teklifler[1]!['priceSpecification'];
+  assert.equal(aylik['@type'], 'CompoundPriceSpecification');
+  assert.equal(tek['@type'], 'PriceSpecification');
+  assert.equal(tek['minPrice'], 18000);
+});
+
+test('teklif: aylık tutar tekrar eden olarak işaretleniyor, düz price değil', () => {
+  const ld = isletmeLd(aylikli, 'tr', baglamOlustur(aylikli));
+  const bilesenler = (ld['makesOffer'] as Record<string, any>[])[0]!
+    ['priceSpecification']['priceComponent'] as Record<string, any>[];
+
+  const kurulum = bilesenler.find((b) => b['price'] === 4000)!;
+  const aylik = bilesenler.find((b) => b['price'] === 950)!;
+
+  // Ayirt eden sey referenceQuantity: olan tekrar ediyor, olmayan bir kerelik.
+  assert.equal(kurulum['referenceQuantity'], undefined);
+  assert.equal(aylik['referenceQuantity']['unitCode'], 'MON');
+  assert.equal(aylik['referenceQuantity']['value'], 1);
+});
+
+test('teklif: abonelik yoksa fazladan teklif üretilmiyor', () => {
+  const ld = isletmeLd(kavakdere, 'tr', baglamOlustur(kavakdere));
+  const teklifler = ld['makesOffer'] as Record<string, any>[];
+  assert.equal(teklifler.length, kavakdere.hizmetler.length);
+});
