@@ -17,6 +17,7 @@ export const SEGMENTLER = {
   iletisim: { tr: 'iletisim', en: 'contact', de: 'kontakt', ar: 'ittisal', ru: 'kontakty', fr: 'contact', es: 'contacto' },
   galeri: { tr: 'galeri', en: 'gallery', de: 'galerie', ar: 'maarad', ru: 'galereya', fr: 'galerie', es: 'galeria' },
   sss: { tr: 'sss', en: 'faq', de: 'faq', ar: 'asila', ru: 'voprosy', fr: 'faq', es: 'preguntas' },
+  menu: { tr: 'menu', en: 'menu', de: 'speisekarte', ar: 'qaima', ru: 'menyu', fr: 'menu', es: 'carta' },
   blog: { tr: 'blog', en: 'blog', de: 'blog', ar: 'mudawana', ru: 'blog', fr: 'blog', es: 'blog' },
 } as const satisfies Record<string, Record<Dil, string>>;
 

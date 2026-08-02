@@ -140,6 +140,7 @@ invisible to it. The structural test caught it.
 | [SETUP.md](SETUP.md) | Install, API key, first scan, first demo |
 | [ETHICS-AND-LAW.md](ETHICS-AND-LAW.md) | Places API terms, KVKK/GDPR, photo copyright, unsolicited outreach |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Why the layers are ordered the way they are |
+| [GOING-LIVE.md](GOING-LIVE.md) | Turning an accepted demo into the customer's real site — written by doing it |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Current status — contributions are not being sought yet, and why |
 
 ## Status

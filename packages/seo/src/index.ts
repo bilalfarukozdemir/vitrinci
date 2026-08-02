@@ -64,4 +64,5 @@ export {
   robotsUret,
   type SitemapKaydi,
   type RobotsKurallari,
+  type SayfaTanimi,
 } from './tarama.ts';

@@ -12,7 +12,7 @@ export type SitemapKaydi = {
   alternates?: { languages: Record<string, string> };
 };
 
-type SayfaTanimi = {
+export type SayfaTanimi = {
   sayfa: SayfaTuru;
   oncelik: number;
   siklik: SitemapKaydi['changeFrequency'];
@@ -57,17 +57,29 @@ export function sayfaTanimlari(isletme: IsletmeTaslak): SayfaTanimi[] {
 /**
  * Butun diller x butun sayfalar icin sitemap.
  * Indekslenebilir degilse BOS doner — demo siteleri sitemap yayinlamamali.
+ *
+ * `sayfalar` NEDEN VAR:
+ *
+ * `sayfaTanimlari` sitenin sayfalarini VERIDEN turetiyor — dort hizmet
+ * varsa dort hizmet sayfasi. Ama bir sayfanin GERCEKTEN yayinlaniyor
+ * olmasi verinin degil UYGULAMANIN ozelligi. Tek sayfalik musteri
+ * sitesinde bu ayrim aciga cikti: sitemap sekiz adres bildiriyordu,
+ * uygulamada iki tane vardi. Kalan alti adres Google'a 404 olarak
+ * gidecekti — sitemap'te 404, Search Console'da dogrudan hata.
+ *
+ * Bu yuzden hangi sayfalarin var oldugunu UYGULAMA soyluyor. Cok
+ * sayfali site `sayfaTanimlari(isletme)` sonucunu aynen gecer.
  */
 export function sitemapUret(
   isletme: IsletmeTaslak,
   baglam: RotaBaglami,
-  secenekler: { sonGuncelleme?: string } = {},
+  secenekler: { sonGuncelleme?: string; sayfalar?: SayfaTanimi[] } = {},
 ): SitemapKaydi[] {
   if (!isletme.seo.indekslenebilir) return [];
 
   const kayitlar: SitemapKaydi[] = [];
 
-  for (const { sayfa, oncelik, siklik } of sayfaTanimlari(isletme)) {
+  for (const { sayfa, oncelik, siklik } of secenekler.sayfalar ?? sayfaTanimlari(isletme)) {
     for (const dil of baglam.destekliDiller) {
       kayitlar.push({
         url: kanonik(sayfa, dil, baglam),

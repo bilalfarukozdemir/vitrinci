@@ -1,3 +1,15 @@
+/*
+ * MUSTERI SITESI — tek isletme, indekslenebilir, taslak seridi yok.
+ *
+ * Bu dosya `apps/demo/src/app/[slug]/page.tsx`ten TURETILDI. Su an
+ * KOPYA; ikinci musteride `packages/site` altina cikarilmali, yoksa
+ * demodaki her duzeltme burada elle tekrarlanir.
+ *
+ * Demodan farki tam olarak su uc sey:
+ *   · veri `@/site`ten geliyor, `[slug]` yok
+ *   · taslak seridi yok (veri musteri tarafindan dogrulandi)
+ *   · alan adi veriden (`seo.alanAdi`), sabit degil
+ */
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
@@ -8,13 +20,18 @@ import { qrSvg } from '@/qr';
 import { coz } from '@studio/data';
 import { anasayfaGrafi, anasayfaMetadata, baglamOlustur, ldMetni } from '@studio/seo';
 
-import { DEMOLAR, SLUGLAR } from '@/veriler/index';
+import { SITE } from '@/site';
 
 /**
- * Demolarin yayinlandigi alan adi.
- * Kendi alan adini aldiginda burayi 'demo.<alan-adin>' yap.
+ * Sitenin kendi alan adi.
+ *
+ * Demoda bu bir SABITTI (`DEMO_ALAN`), cunku butun demolar tek alan adi
+ * altinda yayinlaniyordu. Musteri sitesinde alan adi VERIDE:
+ * `isletme.seo.alanAdi`. Boylece kanonik adres, JSON-LD, sitemap ve QR
+ * kodu ayni tek kaynaktan besleniyor — dosyada elle degistirilecek bir
+ * yer kalmiyor.
  */
-const DEMO_ALAN = process.env.DEMO_ALAN ?? 'demo.local';
+const ALAN = SITE.isletme.seo.alanAdi ?? '';
 
 /*
    YAPIMCI KAYDI — varsayilan olarak YOK.
@@ -32,30 +49,14 @@ const YAPIMCI_URL = process.env.YAPIMCI_URL ?? '';
 
 const metin = (deger: Parameters<typeof coz<string>>[0]) => coz(deger, 'tr', 'tr') ?? '';
 
-export function generateStaticParams() {
-  return SLUGLAR.map((slug) => ({ slug }));
+export function generateMetadata(): Metadata {
+  // Baslik ve aciklama @studio/seo'dan — elle yazilmiyor. Musteri
+  // sitesinde alan adi da VERIDEN geliyor (seo.alanAdi), sabit degil.
+  return anasayfaMetadata(SITE.isletme, 'tr', SITE.isletme.seo.alanAdi);
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}): Promise<Metadata> {
-  const { slug } = await params;
-  const demo = DEMOLAR[slug];
-  if (!demo) return {};
-
-  // Baslik ve aciklama @studio/seo'dan. WhatsApp'ta link paylasildiginda
-  // onizleme karti bunlari gosteriyor — demo gonderiminde en cok goze
-  // carpan sey bu, elle yazmiyoruz.
-  return anasayfaMetadata(demo.isletme, 'tr', DEMO_ALAN);
-}
-
-export default async function DemoSayfasi({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
-  const demo = DEMOLAR[slug];
-  if (!demo) notFound();
-
+export default function Sayfa() {
+  const demo = SITE;
   const { isletme, vaat, basliklar } = demo;
   const adres = isletme.adresler[0];
   const gbp = isletme.gbpMetrikleri;
@@ -67,7 +68,7 @@ export default async function DemoSayfasi({ params }: { params: Promise<{ slug: 
     ? `https://wa.me/${wa}?text=${encodeURIComponent(`Merhaba, ${isletme.ad} hakkında bilgi almak istiyorum.`)}`
     : undefined;
 
-  const graf = anasayfaGrafi(isletme, 'tr', baglamOlustur(isletme, DEMO_ALAN));
+  const graf = anasayfaGrafi(isletme, 'tr', baglamOlustur(isletme));
   const bolge = adres?.ilce ?? adres?.il ?? isletme.hizmetVerilenBolgeler[0]?.ad;
 
   /**
@@ -247,7 +248,7 @@ export default async function DemoSayfasi({ params }: { params: Promise<{ slug: 
           <div className="sar">
             <div className="menu-basi">
               <h2>Menü</h2>
-              <a className="menu-baglanti" href={`/${slug}/menu`}>
+              <a className="menu-baglanti" href="/menu">
                 QR menü sayfası →
               </a>
             </div>
@@ -263,7 +264,7 @@ export default async function DemoSayfasi({ params }: { params: Promise<{ slug: 
               <div
                 className="menu-qr-kod"
                 dangerouslySetInnerHTML={{
-                  __html: qrSvg(`https://${DEMO_ALAN}/${slug}/menu`, { boyut: 150 }),
+                  __html: qrSvg(`https://${ALAN}/menu`, { boyut: 150 }),
                 }}
               />
               <p>

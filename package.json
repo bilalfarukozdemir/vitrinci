@@ -22,7 +22,8 @@
     "panel": "node tools/panel/sunucu.mjs",
     "sizinti": "node tools/denetim/sizinti.mjs",
     "temiz-clone": "node tools/denetim/temiz-clone.mjs",
-    "yayina-hazir": "node tools/denetim/yayina-hazir.mjs"
+    "yayina-hazir": "node tools/denetim/yayina-hazir.mjs",
+    "kilit-temizle": "node tools/denetim/kilit-temizle.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.1.2",

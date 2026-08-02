@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--workspace=@studio/demo"],
       "port": 3001
+    },
+    {
+      "name": "musteri-ornek",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--workspace=@studio/musteri-ornek"],
+      "port": 3002
     }
   ]
 }
