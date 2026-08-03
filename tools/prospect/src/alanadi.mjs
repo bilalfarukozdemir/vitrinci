@@ -101,16 +101,53 @@ export function adayGovdeler(ad) {
     }
   }
 
-  // TEK KELIME DENENMIYOR — bilerek.
-  //
-  // 40 kayitlik gercek taramada tek kelimelik adaylar neredeyse butun
-  // gurultuyu uretti. Cikanlar: bir tibbi cihaz ithalatcisi, bir ABD'li
-  // yazilim sirketi, Puerto Riko'da bir dukkan, satilik bir alan adi ve
-  // bir fuarcilik sirketi. Hicbiri Duzceli bir insaatci degildi.
-  // Tek kelimelik .com adresleri neredeyse her zaman baskasinin.
-  // Iki kelimelik birlesimler ise gercekten isabet ediyor.
-
   return [...govdeler];
+}
+
+/**
+ * TEK KELIMELIK GOVDELER — sadece `.com.tr` icin.
+ *
+ * ─────────────────────────────────────────────────────────────────────
+ * ONCE HIC DENENMIYORDU ve gerekcesi dogruydu: 40 kayitlik gercek
+ * taramada tek kelimelik adaylar neredeyse butun gurultuyu uretti.
+ * Cikanlar bir tibbi cihaz ithalatcisi, bir ABD'li yazilim sirketi,
+ * Puerto Riko'da bir dukkan, satilik bir alan adi ve bir fuarcilik
+ * sirketiydi. Hicbiri Duzceli bir insaatci degildi.
+ *
+ * AMA O GEREKCE `.com` ICIN GECERLI, `.com.tr` ICIN DEGIL.
+ *
+ * `.com.tr` Turkiye'ye kapali ve pahali; kimse spekulasyon icin tek
+ * kelimelik `.com.tr` toplamiyor. Buna karsilik Turk isletmeleri alan
+ * adini tam da AILE ADIYLA aliyor — `acaroglu.com.tr` gibi. "Garden",
+ * "restaurant" gibi tarif edici kelimeler adrese girmiyor.
+ *
+ * Bu ayrimi gercek bir kacirma gosterdi: "<Aile> <Tarif> <Sektor>"
+ * bicimindeki bir isletmenin sitesi `<aile>.com.tr`de duruyordu, tarama
+ * bulamadi ve "siteniz yok" varsayimiyla demo hazirlandi. Yanlisligi
+ * kullanici fark etti.
+ *
+ * Yer adlari ve sektor kelimeleri disarida: `duzce.com.tr` ya da
+ * `<sektor>.com.tr` kimsenin markasi degil — boyle bir adres
+ * gercek bir taramada jenerik bir SEO sitesi olarak cikti.
+ */
+export function tekKelimeGovdeler(ad) {
+  /*
+     SADECE ILK ANLAMLI KELIME.
+
+     Turkce isletme adlarinda marka ya da aile adi BASTA geliyor,
+     tarif edici kelimeler arkadan: "<Aile> Garden", "<Aile> Sofrasi",
+     "<Aile> Yapi Malzemeleri". Alan adina giren de bastaki oluyor.
+
+     Ilk denemede ilk IKI kelime alinmisti ve arkadan "garden",
+     "sofrasi", "malzemeleri" gibi tarif edici kelimeler geldi — bunlari
+     tek tek SEKTOR listesine eklemek sonu gelmeyen bir is olurdu.
+     Konum kurali listeden daha saglam.
+  */
+  return sadelestir(ad)
+    .split(' ')
+    .filter((k) => k.length >= 5 && k.length <= 40)
+    .filter((k) => !JENERIK.has(k) && !SEKTOR.has(k) && !YERLER.has(k))
+    .slice(0, 1);
 }
 
 /** Alan adi DNS'te var mi? Cozumlenmiyorsa hic HTTP denemiyoruz. */
@@ -126,12 +163,39 @@ async function cozumleniyorMu(alanAdi) {
   return false;
 }
 
-/** Sayfada telefon geciyor mu? Bicim farkliliklarini yutmak icin sadece rakamlar. */
+/**
+ * Sayfada telefon geciyor mu?
+ *
+ * ─────────────────────────────────────────────────────────────────────
+ * ONCEKI HAL BUTUN SAYFAYI TEK RAKAM DIZISINE CEVIRIYORDU:
+ *
+ *     html.replace(/\D/g, '').includes(hedef)
+ *
+ * Bir WordPress sayfasinda CSS degerleri, element kimlikleri, surum
+ * numaralari, base64 parcalari — hepsi birlesip yuz binlerce haneli tek
+ * bir dizi oluyor. Icinden herhangi bir 10 haneli sayinin TESADUFEN
+ * cikmasi neredeyse kacinilmaz.
+ *
+ * Somut vaka: bir WordPress sitesinde gorunen tek telefon
+ * "3333333333" yer tutucusuyken, hedef numara "kesin" eslesme verdi.
+ * Bu `kesin`, `site_yok` bulgusunu KALDIRIYOR — yani isletmeye
+ * "sitenizi buldum" diyen bir karar, rakam corbasindaki bir rastlantiya
+ * dayaniyordu.
+ *
+ * Artik once sayfadaki TELEFON GORUNUMLU dizgeler cikariliyor, sonra
+ * onlarin normalize hali karsilastiriliyor. Rakamlar ancak bir telefon
+ * numarasi olarak yazilmissa sayiliyor.
+ * ─────────────────────────────────────────────────────────────────────
+ */
 function telefonGeciyorMu(html, telefon) {
-  const hedef = String(telefon ?? '').replace(/\D/g, '').replace(/^90/, '').replace(/^0/, '');
+  const normalize = (s) => String(s ?? '').replace(/\D/g, '').replace(/^90/, '').replace(/^0/, '');
+  const hedef = normalize(telefon);
   if (hedef.length < 10) return false;
-  const sayfa = html.replace(/\D/g, '');
-  return sayfa.includes(hedef);
+
+  // Sayfadaki telefon gorunumlu dizgeler: 0xxx xxx xx xx, (0xxx) xxx xxxx,
+  // +90 xxx ..., xxx-xxx-xxxx — ayirac olarak bosluk, tire, nokta, parantez.
+  const adaylar = html.match(/(?:\+?9?0[\s.()-]*)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{2}[\s.-]?\d{2}\b/g) ?? [];
+  return adaylar.some((a) => normalize(a) === hedef);
 }
 
 /**
@@ -148,8 +212,36 @@ function telefonGeciyorMu(html, telefon) {
  * @returns {Promise<null | {alanAdi, durum, kesin, guven, baslik?}>}
  */
 export async function siteAra(ad, telefon, { sehir = '', zamanAsimi = 8000 } = {}) {
-  for (const govde of adayGovdeler(ad)) {
-    for (const uzanti of UZANTILAR) {
+  /*
+     Aday listesi iki parcali: cok kelimeli govdeler butun uzantilarda,
+     tek kelimeli govdeler SADECE `.com.tr`de. Gerekcesi
+     `tekKelimeGovdeler`in ustunde.
+  */
+  const adaylar = [
+    ...adayGovdeler(ad).map((g) => ({ govde: g, uzantilar: UZANTILAR })),
+    ...tekKelimeGovdeler(ad).map((g) => ({ govde: g, uzantilar: ['com.tr'] })),
+  ];
+
+  /*
+     ILK ESLESME DEGIL, EN IYI ESLESME.
+
+     Onceki hal ilk bulduguna donuyordu ve bu yanlis sonuc uretiyordu:
+     "<Aile> Garden Restaurant" bicimindeki bir adda once
+     `gardenrestaurant.org` (zayif, jenerik bir adres) eslesiyor ve
+     fonksiyon oracikta donuyordu. Isletmenin GERCEK sitesi
+     `<aile>.com.tr` hic denenmiyordu.
+     Ayni sey `catisistemleri.com.tr` icin de oldu.
+     Zayif bir eslesmenin kesin bir eslesmeyi onlemesi, aramanin
+     amacini tersine ceviriyor.
+
+     Artik butun adaylar deneniyor ve en yuksek guvenli olan donuyor.
+     `kesin` bulununca erken cikiliyor — daha iyisi yok.
+  */
+  const SIRA = { kesin: 3, guclu: 2, zayif: 1 };
+  let enIyi = null;
+
+  for (const { govde, uzantilar } of adaylar) {
+    for (const uzanti of uzantilar) {
       const alanAdi = `${govde}.${uzanti}`;
       if (!(await cozumleniyorMu(alanAdi))) continue;
 
@@ -169,14 +261,17 @@ export async function siteAra(ad, telefon, { sehir = '', zamanAsimi = 8000 } = {
       const kesin = telefonGeciyorMu(html, telefon);
       const sehirGeciyor = sehir ? sadelestir(html).includes(sadelestir(sehir)) : false;
 
-      return {
+      const aday = {
         alanAdi,
         durum: yanit.status,
         kesin,
         guven: kesin ? 'kesin' : sehirGeciyor ? 'guclu' : 'zayif',
         baslik: (html.match(/<title>([^<]*)<\/title>/i) ?? [])[1]?.trim().slice(0, 120),
       };
+
+      if (!enIyi || SIRA[aday.guven] > SIRA[enIyi.guven]) enIyi = aday;
+      if (aday.guven === 'kesin') return aday; // daha iyisi cikamaz
     }
   }
-  return null;
+  return enIyi;
 }

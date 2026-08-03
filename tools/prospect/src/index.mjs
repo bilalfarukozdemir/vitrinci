@@ -15,6 +15,7 @@ import {
 } from './places.mjs';
 import { KURU_ISLETMELER } from './fixtures.mjs';
 import { siteyiDenetle, hiziOlc } from './audit.mjs';
+import { siteAra } from './alanadi.mjs';
 import { canlilikPuani, zayiflikPuani, firsatSkoru, oncelikEtiketi, csvUret } from './score.mjs';
 import { raporUret, panelUret } from './report.mjs';
 
@@ -299,6 +300,20 @@ const denetlenen = await havuzda(isletmeler, 8, async (isletme) => {
 
   if ((isletme.yorumSayisi ?? 0) < 15) bulgular.push('gbp_zayif');
 
+  /*
+     SON YORUM TAZELIGI.
+
+     Places API tarihi mutlak degil, "3 hafta once" gibi GORELI bir
+     dizge olarak donuyor; `yorumYasiGun` onu yaklasik gune ceviriyor.
+     Yaklasik olmasi sorun degil, esik 90 gun.
+
+     Neden 90: sitesiz 402 isletmenin dagiliminda %73'u son 3 ay icinde
+     yorum almis. Yani 3 aydan eski olmak GERCEKTEN ayirt edici — daha
+     dar bir esik cogunlugu isaretler ve bulgu anlamini yitirirdi.
+  */
+  const yorumYasi = enYeniYorumYasi(isletme.yorumlar);
+  if (yorumYasi != null && yorumYasi > 90) bulgular.push('yorum_eskimis');
+
   yaz(`\r        ${String(++sayac).padStart(4)}/${isletmeler.length}   `);
 
   return { ...isletme, bulgular, denetim };
@@ -306,7 +321,71 @@ const denetlenen = await havuzda(isletmeler, 8, async (isletme) => {
 
 console.log('\n');
 
+/**
+ * "3 hafta once" gibi goreli bir dizgeyi yaklasik GUNE cevirir.
+ *
+ * Places API yorum tarihini mutlak vermiyor. Yaklasiklik burada sorun
+ * degil: 90 gunluk esikte "10 hafta" ile "70 gun" arasindaki fark
+ * kararı degistirmiyor.
+ *
+ * Cozulemeyen bicimde null donuyor — tahmin etmektense bulgu
+ * uretmemek dogru. Bilinmeyen bir tarihi "eski" saymak, isletmeye
+ * olmayan bir kusur atfetmek olurdu.
+ */
+function yorumYasiGun(zaman) {
+  const m = String(zaman ?? '').match(/(bir|iki|üç|dört|beş|d+)s*(gün|hafta|ay|yıl)/i);
+  if (!m) return null;
+  const sayi = { bir: 1, iki: 2, 'üç': 3, 'dört': 4, 'beş': 5 }[m[1].toLowerCase()] ?? Number(m[1]);
+  if (!Number.isFinite(sayi)) return null;
+  return sayi * { 'gün': 1, hafta: 7, ay: 30, 'yıl': 365 }[m[2].toLowerCase()];
+}
+
+/** En yeni yorumun yasi (gun). Yorum yoksa ya da hicbiri cozulemezse null. */
+function enYeniYorumYasi(yorumlar) {
+  const g = (yorumlar ?? []).map((y) => yorumYasiGun(y.zaman)).filter((n) => n != null);
+  return g.length ? Math.min(...g) : null;
+}
+
 // ---------------------------------------------------------------- 3. skorlama
+
+/*
+   ─────────────────────────────────────────────────────────────────────
+   EMSALE GORE YORUM SAYISI.
+
+   "Yorum sayisi dusuk" sabit bir esikle olculemiyor: bir cekiciye 40
+   yorum cok, bir yol ustu restorana az. Karsilastirma AYNI TUR ve AYNI
+   ILDEKI isletmelerin ORTANCASINA gore yapiliyor.
+
+   Ortalama degil ortanca: tek bir 5.933 yorumlu isletme ortalamayi
+   yukari cekip butun mahalleyi "emsalinin altinda" gosteriyordu.
+
+   En az 5 emsal sarti var — uc isletmeden cikan bir "ortanca" olcu
+   degil, gurultudur.
+   ─────────────────────────────────────────────────────────────────────
+*/
+{
+  const gruplar = new Map();
+  for (const k of denetlenen) {
+    const anahtar = `${k.tur ?? '?'}|${k.sehir ?? '?'}`;
+    if (!gruplar.has(anahtar)) gruplar.set(anahtar, []);
+    gruplar.get(anahtar).push(k.yorumSayisi ?? 0);
+  }
+
+  const ortancalar = new Map();
+  for (const [anahtar, sayilar] of gruplar) {
+    if (sayilar.length < 5) continue;
+    const s = [...sayilar].sort((a, b) => a - b);
+    ortancalar.set(anahtar, s[Math.floor(s.length / 2)]);
+  }
+
+  for (const k of denetlenen) {
+    const ortanca = ortancalar.get(`${k.tur ?? '?'}|${k.sehir ?? '?'}`);
+    // Yarisindan az: "biraz geride" degil, gorunur sekilde geride.
+    if (ortanca && ortanca >= 20 && (k.yorumSayisi ?? 0) < ortanca / 2) {
+      k.bulgular.push('yorum_rakipten_az');
+    }
+  }
+}
 
 const skorlanan = denetlenen
   .map((k) => {
@@ -317,7 +396,70 @@ const skorlanan = denetlenen
   })
   .sort((a, b) => b.firsat - a.firsat);
 
+
 const kisaListe = skorlanan.slice(0, limit);
+
+/*
+   ─────────────────────────────────────────────────────────────────────
+   ALAN ADI KONTROLU — SADECE KISA LISTE.
+
+   Her aday icin birkac DNS + HTTP istegi demek; 2.696 isletmede
+   dakikalar surer ve cogu zaten rapor almayacak. Kisa listede ~40
+   isletme var, orada maliyeti kabul edilebilir.
+
+   YALNIZCA SITESI OLMAYANDA calisiyor — sitesi olanin adresi zaten
+   belli, aramanin anlami yok.
+
+   IKI FARKLI SONUC, iki farkli anlam:
+
+     kesin   Telefon numarasi sayfada geciyor. Site ASLINDA VAR ve
+             tarama kacirmis. Bu durumda `site_yok` bulgusu KALDIRILIYOR
+             — "siteniz yok" diye rapor gondermek yanlis olurdu.
+     digeri  Adres kayitli ama isletmenin oldugu dogrulanamiyor. Satis
+             acisindan asil sey bu: adinizdan tureyen alan adi baskasinin
+             elinde.
+
+   Gercek bir vakada birincisi oldu: aile adindan tureyen `.com.tr`
+   adresi isletmenindi, tarama bulamadi, "siteniz yok" varsayimiyla demo
+   gitti. Hatayi kullanici yakaladi.
+   ─────────────────────────────────────────────────────────────────────
+*/
+{
+  const sitesizler = kisaListe.filter((k) => !k.site);
+  if (sitesizler.length) {
+    console.log(`  [3/4] Alan adı kontrolü (${sitesizler.length} sitesiz işletme)...`);
+    let sayilan = 0;
+    await havuzda(sitesizler, 4, async (k) => {
+      const bulunan = await siteAra(k.ad, k.telefon, { sehir: k.sehir ?? '', zamanAsimi: 7000 });
+      yaz(`\r        ${String(++sayilan).padStart(3)}/${sitesizler.length}   `);
+      if (!bulunan) return;
+
+      if (bulunan.kesin) {
+        /*
+           SITE ASLINDA VAR — ama rapor BOS KALMAMALI.
+
+           Ilk surumde sadece `site_yok` kaldiriliyordu ve geriye hicbir
+           bulgu kalmayan isletmeler icin bombos rapor uretildi. Bos bir
+           "analiz" gondermek, hic gondermemekten kotu.
+
+           Bulunan site simdi DENETLENIYOR: baslik, aciklama, sema,
+           telefon, harita. Boylece rapor "siteniz yok"tan "siteniz var
+           ama sunlar eksik"e donuyor — ki satis acisi da o.
+        */
+        k.site = `https://${bulunan.alanAdi}`;
+        k.gizliSite = bulunan.alanAdi;
+        k.bulgular = k.bulgular.filter((b) => b !== 'site_yok');
+        k.denetim = await siteyiDenetle(k.site);
+        k.bulgular.push(...k.denetim.bulgular);
+      } else {
+        k.alanAdiBaskasinda = bulunan.alanAdi;
+        k.bulgular.push('alan_adi_baskasinda');
+      }
+    });
+    console.log('');
+  }
+}
+
 
 // Hiz olcumu pahali (her biri 10-20sn), o yuzden sadece kisa listedeki
 // ve sitesi erisilebilir olanlarda calistiriyoruz.

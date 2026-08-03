@@ -398,6 +398,46 @@ export const BULGULAR = {
   sablon_platform: { puan: 10, baslik: 'Hazır şablon platformu', aciklama: 'Site hazır bir site kurucu üzerinde duruyor. Teknik SEO tarafında müdahale edilebilecek alan sınırlı, sayfa hızı ve özelleştirme tavanı düşük.' },
   tek_dil: { puan: 18, baslik: 'Yalnızca tek dilde', aciklama: 'Yurt dışına satış yapan bir firma için site tek dilde. Yabancı alıcı sizi kendi dilinde aradığında hiçbir sonuçta görünmüyorsunuz.' },
   gbp_zayif: { puan: 12, baslik: 'Google işletme kaydı zayıf', aciklama: 'İşletme profilinizde yorum sayısı düşük. Harita sonuçlarında sıralama büyük ölçüde bu sinyale bağlı.' },
+
+  /*
+     ─────────────────────────────────────────────────────────────────
+     SITESI OLMAYAN ISLETME ICIN BULGULAR
+
+     Denetimin tamami sitenin UZERINDE calisiyordu: baslik, h1, sema,
+     mobil uyum, hiz. Sitesi olmayanda bakilacak sayfa yok, geriye tek
+     bir `site_yok` kaliyordu.
+
+     Uretilen 310 raporun 279'u bir ya da iki madde tasiyordu — yani
+     asil hedef kitlede rapor en zayif halindeydi. Asagidaki uc bulgu
+     Google kaydindan geliyor ve site olmadan da calisiyor.
+
+     Denenip ELENEN bir dorduncu: fotograf sayisi. Sitesiz 402
+     isletmenin ortalamasi 7,8 fotograf, ucten azi olan yalnizca 3
+     tane. Herkesin yeterli fotografi varken "fotografiniz az" demek
+     bos bir madde uretirdi.
+     ─────────────────────────────────────────────────────────────────
+  */
+
+  alan_adi_baskasinda: {
+    puan: 16,
+    baslik: 'Adınızın alan adı başkasında',
+    aciklama:
+      'İşletmenizin adından türeyen alan adı kayıtlı ama size ait değil. Sizi arayan biri o adrese düştüğünde başka bir yere gidiyor. Kalan seçenekler de zamanla azalıyor — alan adı alınmadan önce belirlenmesi gereken bir şey.',
+  },
+
+  yorum_eskimis: {
+    puan: 10,
+    baslik: 'Son yorum epey eski',
+    aciklama:
+      'Google işletme kaydınıza uzun süredir yeni yorum gelmemiş. Harita sıralamasında yorum sayısı kadar tazeliği de sayılıyor; uzun sessizlik işletmeyi geri plana atıyor.',
+  },
+
+  yorum_rakipten_az: {
+    puan: 9,
+    baslik: 'Yorum sayısı emsalinin altında',
+    aciklama:
+      'Aynı bölgede aynı işi yapan işletmelerin ortancasına göre yorum sayınız düşük. Harita sonuçlarında yan yana çıktığınızda karşılaştırılan ilk sayı bu oluyor.',
+  },
 };
 
 /** Firsat skoru = canlilik kapisi x zayiflik. Olu isletmenin kotu sitesi degersizdir. */
