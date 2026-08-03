@@ -144,12 +144,21 @@
      hesaplamaya gerek yok. Desteklemeyen tarayicida `min-height`
      devrede kaliyor ve davranis eskisi gibi oluyor, yani bozulmuyor.
      Yedek olarak JS tarafinda da bir ayar var (bkz. `notBoyutla`).
+
+     TAVAN YOK, bilerek. Once 60vh sinir konmustu ama yanlisti: uzun bir
+     notta kaydirma geri geliyordu, yani cozulmek istenen sey geri
+     geliyordu. Tavanin gerekcesi "kaydet dugmesi ekrandan kaymasin"di —
+     oysa kaydet dugmesi YOK, kaydetme yazarken otomatik.
+
+     Yuksek notu tasiyan sey zaten panelin kendisi: genis ekranda `.duzen`
+     yapiskan ve `overflow-y: auto`, dar ekranda sayfa kayiyor. Ikisinde
+     de kaydirma KAPSAYICIDA oluyor — kutunun icinde degil. Belge gibi
+     kaydirmak, kutu icinde kaydirmaktan okunakli.
   */
   textarea {
     min-height: 5rem;
     resize: vertical;
     field-sizing: content;
-    max-height: 60vh;
   }
   input:focus, select:focus, textarea:focus { outline: 2px solid var(--ana); outline-offset: 1px; }
   .baglar { display: flex; gap: .8rem; flex-wrap: wrap; margin-top: 1rem; font-size: .8rem; }
@@ -429,7 +438,8 @@ const OTOMATIK_BOY = CSS.supports?.('field-sizing', 'content') ?? false;
 function notBoyutla(el) {
   if (OTOMATIK_BOY || el.tagName !== 'TEXTAREA') return;
   el.style.height = '';
-  el.style.height = `${Math.min(el.scrollHeight + 2, window.innerHeight * 0.6)}px`;
+  // Tavan yok — kaydirma kutuda degil panelde olmali (bkz. textarea kurali).
+  el.style.height = `${el.scrollHeight + 2}px`;
 }
 
 document.addEventListener('input', (e) => {
