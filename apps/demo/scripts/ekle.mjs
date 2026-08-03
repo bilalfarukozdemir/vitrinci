@@ -97,8 +97,41 @@ function hamdanBul(istenen) {
   if (!existsSync(hamYol)) return null;
 
   const aranan = trNormalize(istenen);
-  const h = JSON.parse(readFileSync(hamYol, 'utf8')).find((k) => trNormalize(k.ad ?? '').includes(aranan));
+  const hepsi = JSON.parse(readFileSync(hamYol, 'utf8'));
+
+  /*
+     TAM AD ONCE, PARCA SONRA.
+
+     Onceki hal dogrudan `includes` yapiyordu ve ILK eslesen kazaniyordu.
+     Yani "Deniz Cafe" arandiginda, listede once duran "Deniz Cafe Bistro
+     & Restaurant" secilebiliyor ve asil hedef olan "Deniz Cafe" hic
+     bakilmiyordu — ayni ada sahip iki ayri sehirdeki isletme.
+
+     Sonuc sessizdi ve pahaliydi: iskelet BIR isletmeden uretilirken
+     icerik OTEKININ yorumlarindan yazildi, ve ortaya iki isletmenin
+     karisimi bir sayfa cikti. Gercekten olan bir sey; musteriye o
+     haliyle gonderildi.
+
+     Tam ad eslesmesi varsa o kazanir. Parca eslesmesi birden fazlaysa
+     artik SESSIZCE ilkini secmiyor, hepsini yazip duruyor: hangisini
+     istedigini insan soylesin.
+  */
+  const tam = hepsi.filter((k) => trNormalize(k.ad ?? '') === aranan);
+  if (tam.length === 1) return paketle(tam[0]);
+
+  const parca = hepsi.filter((k) => trNormalize(k.ad ?? '').includes(aranan));
+  if (parca.length > 1) {
+    console.log(`\n  ⚠ "${istenen}" ${parca.length} kayda uyuyor — hangisi oldugunu belirt:`);
+    for (const k of parca) console.log(`      · ${k.ad}  (${k.telefon ?? 'tel yok'}, ${k.puan ?? '-'}★ ${k.yorumSayisi ?? 0}y)`);
+    console.log('');
+    return null;
+  }
+  const h = parca[0];
   if (!h) return null;
+  return paketle(h);
+}
+
+function paketle(h) {
 
   return {
     isletme: prospecttenTaslak(h, { taranmaTarihi: taramaKlasoru.slice(0, 10) }),
