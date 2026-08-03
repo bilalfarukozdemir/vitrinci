@@ -30,7 +30,7 @@
  */
 import { createServer } from 'node:http';
 import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync, statSync, rmSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { resolve, dirname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const buKok = dirname(fileURLToPath(import.meta.url));
@@ -90,8 +90,41 @@ function gbpMetrikleri(metin) {
   return { puan: al('puan'), yorumSayisi: al('yorumSayisi') };
 }
 
+/**
+ * Tarama ciktisindaki raporlari slug'a gore indeksler.
+ *
+ * Rapor dosyalari `out/<tarama>/raporlar/<slug>.html` altinda. Demo
+ * kimligi ise sonunda jeton tasiyor (`... -a1b2c3`), o yuzden jeton
+ * atilarak eslesiyor.
+ *
+ * ⚠ HER DEMONUN RAPORU YOK. Rapor yalnizca taramanin KISA LISTESI icin
+ * uretiliyor; `ham.json`'dan elle eklenen isletmeler o adimi atliyor.
+ * Su an 51 demonun 20'sinde rapor var. Olmayanda baglanti hic
+ * basilmiyor — bos bir link vermek, olmayan bir belge vaat etmek olurdu.
+ *
+ * Ayni slug birden fazla taramada varsa EN YENI tarama kazaniyor
+ * (klasor adi tarihle basliyor, siralama bunu veriyor).
+ */
+function raporlariIndeksle() {
+  const kok = resolve(repoKok, 'tools', 'prospect', 'out');
+  if (!existsSync(kok)) return new Map();
+
+  const indeks = new Map();
+  const taramalar = readdirSync(kok).filter((d) => /^\d{4}-\d{2}-\d{2}/.test(d)).sort();
+  for (const tarama of taramalar) {
+    const dizin = resolve(kok, tarama, 'raporlar');
+    if (!existsSync(dizin)) continue;
+    for (const dosya of readdirSync(dizin)) {
+      if (!dosya.endsWith('.html')) continue;
+      indeks.set(dosya.replace(/\.html$/, ''), `${tarama}/raporlar/${dosya}`);
+    }
+  }
+  return indeks;
+}
+
 function demolariOku() {
   if (!existsSync(demoDizin)) return [];
+  const raporlar = raporlariIndeksle();
 
   return readdirSync(demoDizin)
     .filter((d) => d.endsWith('.ts') && d !== 'index.ts')
@@ -113,6 +146,10 @@ function demolariOku() {
         mapsUrl: (alan(metin, 'mapsUrl', 8) ?? '').split('&')[0] || undefined,
         ...gbpMetrikleri(metin),
         demoUrl: `${DEMO_ALAN}/${yol}`,
+        // Jeton atilarak eslesiyor; yoksa alan hic gonderilmiyor.
+        raporUrl: raporlar.has(yol.replace(/-[a-z0-9]{6}$/, ''))
+          ? `/rapor/${raporlar.get(yol.replace(/-[a-z0-9]{6}$/, ''))}`
+          : undefined,
         vazgecildi,
       };
     })
@@ -229,6 +266,38 @@ const sunucu = createServer(async (istek, yanit) => {
         'cache-control': 'no-store',
       });
       yanit.end(readFileSync(resolve(buKok, 'panel.html'), 'utf8'));
+      return;
+    }
+
+    /*
+       RAPOR SERVISI.
+
+       `out/<tarama>/raporlar/<dosya>.html` altindaki raporlari servis
+       ediyor. Yol ICERIDEN uretiliyor (raporlariIndeksle) ama gelen
+       istegi yine de dogruluyoruz: kullanici adres cubuguna elle bir sey
+       yazabiliyor ve `..` ile disari cikmak klasik bir acik.
+
+       Cozulmus mutlak yolun rapor kokunun ALTINDA kaldigi kontrol
+       ediliyor — desen suzmek yerine sonucu dogrulamak, atlanan bir
+       kacis dizisi olmadigini garanti ediyor.
+    */
+    if (istek.method === 'GET' && pathname.startsWith('/rapor/')) {
+      const kok = resolve(repoKok, 'tools', 'prospect', 'out');
+      const istenen = resolve(kok, decodeURIComponent(pathname.slice('/rapor/'.length)));
+      const raporMu = istenen.startsWith(kok + sep) && istenen.endsWith('.html')
+        && istenen.includes(`${sep}raporlar${sep}`);
+
+      if (!raporMu || !existsSync(istenen)) {
+        yanit.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+        yanit.end('Rapor bulunamadı');
+        return;
+      }
+      yanit.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'x-robots-tag': 'noindex, nofollow, noarchive',
+        'cache-control': 'no-store',
+      });
+      yanit.end(readFileSync(istenen, 'utf8'));
       return;
     }
 
