@@ -132,7 +132,25 @@
     border: 1px solid var(--cizgi-2); border-radius: 5px; padding: .45rem .55rem;
     font: inherit; font-size: .875rem;
   }
-  textarea { min-height: 5rem; resize: vertical; }
+  /*
+     NOT ALANI YAZDIKCA BUYUYOR.
+
+     Sabit yukseklikte kucuk bir kutuydu ve notlar uzun: bir prospect'in
+     kaydinda gecmis konusmalar, kanal bilgisi, uyarilar birikiyor.
+     Okumak icin minik bir pencerede asagi yukari kaydirmak gerekiyordu,
+     yani en cok ihtiyac duyulan bilgi en zor okunan bilgiydi.
+
+     `field-sizing: content` bunu CSS ile yapiyor — JS ile yukseklik
+     hesaplamaya gerek yok. Desteklemeyen tarayicida `min-height`
+     devrede kaliyor ve davranis eskisi gibi oluyor, yani bozulmuyor.
+     Yedek olarak JS tarafinda da bir ayar var (bkz. `notBoyutla`).
+  */
+  textarea {
+    min-height: 5rem;
+    resize: vertical;
+    field-sizing: content;
+    max-height: 60vh;
+  }
   input:focus, select:focus, textarea:focus { outline: 2px solid var(--ana); outline-offset: 1px; }
   .baglar { display: flex; gap: .8rem; flex-wrap: wrap; margin-top: 1rem; font-size: .8rem; }
   .kapat { position: absolute; right: 1rem; top: 1rem; background: none; border: 0;
@@ -350,6 +368,11 @@ function duzenCiz(k) {
     <div class="kayit-bilgi" id="kayitBilgi"></div>
   </div>`;
 
+  // Kayit acilir acilmaz mevcut not tam boyuyla gorunsun — kaydirarak
+  // okunmasin. Yazarken buyutmek yetmiyor; asil dert zaten YAZILMIS
+  // uzun notu okumak.
+  document.querySelectorAll('#duzen textarea').forEach(notBoyutla);
+
   // Dar ekranda panel tablonun ALTINDA kaliyor; yapiskan konumlandirma
   // orada ise yaramiyor, o yuzden gorunume kaydiriyoruz.
   if (window.matchMedia('(max-width: 62rem)').matches) {
@@ -392,8 +415,26 @@ document.getElementById('ara').addEventListener('input', (e) => {
   ciz();
 });
 
+/*
+   `field-sizing: content` YOKSA YEDEK.
+
+   Chrome ve Edge destekliyor; Firefox ve Safari'nin eski surumleri
+   desteklemiyor. Destek yoksa yukseklik elle ayarlaniyor.
+
+   `height = ''` once sifirlaniyor: yoksa `scrollHeight` her zaman mevcut
+   yuksekligi dondurur ve kutu buyuyup bir daha kucultmez.
+*/
+const OTOMATIK_BOY = CSS.supports?.('field-sizing', 'content') ?? false;
+
+function notBoyutla(el) {
+  if (OTOMATIK_BOY || el.tagName !== 'TEXTAREA') return;
+  el.style.height = '';
+  el.style.height = `${Math.min(el.scrollHeight + 2, window.innerHeight * 0.6)}px`;
+}
+
 document.addEventListener('input', (e) => {
   const a = e.target.dataset?.a;
+  notBoyutla(e.target);
   if (a && secili) kaydet(secili, a, e.target.value);
 });
 document.addEventListener('change', (e) => {

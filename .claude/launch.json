@@ -4,20 +4,41 @@
     {
       "name": "demo",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--workspace=@studio/demo"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--workspace=@studio/demo"
+      ],
       "port": 3001
     },
     {
       "name": "musteri-ornek",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--workspace=@studio/musteri-ornek"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--workspace=@studio/musteri-ornek"
+      ],
       "port": 3002
     },
     {
       "name": "pazarlama",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--workspace=@studio/pazarlama"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--workspace=@studio/pazarlama"
+      ],
       "port": 3000
+    },
+    {
+      "name": "panel",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "panel"
+      ],
+      "port": 4321
     }
   ]
 }
