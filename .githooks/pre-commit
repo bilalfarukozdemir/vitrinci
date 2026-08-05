@@ -29,3 +29,28 @@ if ! npm run --silent sizinti; then
   echo ""
   exit 1
 fi
+
+# ─────────────────────────────────────────────────────────────────────
+# BİÇİM DENETİMİ — karşılığı olmayan sınıf ve token adları.
+#
+# NEDEN KANCADA: bu hata SESSİZ. Var olmayan bir CSS sınıfı derlemeyi
+# geçiyor, tip denetimini geçiyor, sayfa açılıyor — sadece biçim
+# uygulanmıyor. Yani "test kırmızı yandı" diye bir uyarı hiç gelmiyor.
+#
+# Üç kez üst üste oldu (--marka-cizgi, .sss-oge, .adim-no). İlk ikisi
+# göz taramasıyla, üçüncüsü kullanıcı bildirimiyle yakalandı — yani
+# tek savunma hattı dikkatti ve tuttuğu söylenemez.
+#
+# Maliyeti ~1 saniye; sızıntı taramasının yanına konabilecek kadar ucuz.
+
+echo "biçim denetimi…"
+
+if ! npm run --silent bicim; then
+  echo ""
+  echo "  ✘ COMMIT DURDURULDU — biçim denetimi geçmedi."
+  echo ""
+  echo "    Yukarıdaki adlar hiçbir yerde tanımlı değil, yani hiçbir şey"
+  echo "    yapmıyorlar. Ya CSS'e ekle ya işaretlemeden çıkar."
+  echo ""
+  exit 1
+fi
