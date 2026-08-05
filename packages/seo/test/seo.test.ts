@@ -608,3 +608,104 @@ test('bölge sırası: ilk bölge başlıklara giriyor', () => {
   // anaSehir listenin ilkini alıyor; sıra değişirse başlıklar da değişir.
   assert.ok(anasayfaMetadata(cokBolgeli, 'tr').title.includes('Düzce'));
 });
+
+/*
+   SAYFA BASINA DIL LISTESI.
+
+   Sitemap sayfa x dil carpimi uretiyor. Ingilizce surumu henuz yazilmamis
+   bir sayfa, dil listesine 'en' eklendigi anda sitemap'te var gibi
+   gorunup Google'a 404 olarak gidiyordu. Ayni celiski hreflang'de de
+   vardi: olmayan bir surume alternatif gosteriliyordu.
+*/
+
+const cokDilli: IsletmeTaslak = isletmeTaslakSemasi.parse({
+  ...JSON.parse(JSON.stringify(kavakdere)),
+  diller: { varsayilan: 'tr', destekli: ['tr', 'en'] },
+});
+
+test('sitemap: sayfanın kendi dil listesi site dillerini eziyor', () => {
+  const baglam = baglamOlustur(cokDilli);
+  const kayitlar = sitemapUret(cokDilli, baglam, {
+    sayfalar: [
+      // Anasayfa iki dilde de var.
+      { sayfa: { tur: 'anasayfa' }, oncelik: 1, siklik: 'weekly' },
+      // İletişim SADECE Türkçe — İngilizcesi yazılmadı.
+      { sayfa: { tur: 'sabit', segment: 'iletisim' }, oncelik: 0.6, siklik: 'yearly', diller: ['tr'] },
+    ],
+  });
+
+  const urller = kayitlar.map((k) => k.url);
+  assert.ok(urller.includes('https://kavakderetas.example/'));
+  assert.ok(urller.includes('https://kavakderetas.example/en'));
+  assert.ok(urller.includes('https://kavakderetas.example/iletisim'));
+
+  // ASIL MESELE: İngilizce iletişim sayfası sitemap'te OLMAMALI.
+  assert.ok(
+    !urller.some((u) => u.includes('/en/contact')),
+    `İngilizcesi olmayan sayfa sitemap'e girdi: ${urller.join(', ')}`,
+  );
+});
+
+test('hreflang: olmayan dile alternatif gösterilmiyor', () => {
+  const baglam = baglamOlustur(cokDilli);
+  const kayitlar = sitemapUret(cokDilli, baglam, {
+    sayfalar: [
+      { sayfa: { tur: 'sabit', segment: 'iletisim' }, oncelik: 0.6, siklik: 'yearly', diller: ['tr'] },
+    ],
+  });
+
+  const diller = Object.keys(kayitlar[0]!.alternates!.languages);
+  assert.deepEqual(diller.sort(), ['tr', 'x-default']);
+});
+
+test('dil listesi verilmezse site dillerinin hepsi kullanılıyor', () => {
+  const baglam = baglamOlustur(cokDilli);
+  const kayitlar = sitemapUret(cokDilli, baglam, {
+    sayfalar: [{ sayfa: { tur: 'anasayfa' }, oncelik: 1, siklik: 'weekly' }],
+  });
+  assert.equal(kayitlar.length, 2);
+  assert.deepEqual(kayitlar.map((k) => k.url).sort(), [
+    'https://kavakderetas.example/',
+    'https://kavakderetas.example/en',
+  ]);
+});
+
+/*
+   SAYFA METADATA'SI DA AYNI KISITA UYMALI.
+
+   Yukaridaki uc test sitemap'i koruyor. Ama hreflang etiketleri IKI
+   yerden birden cikiyor: sitemap ve sayfanin kendi <head>'i. Yalnizca
+   birini kisitlamak sorunu cozmuyor, ikiye boluyor — sitemap "boyle bir
+   adres yok" derken sayfa "var" demeye devam ediyor.
+
+   Bu tam olarak yasandi: vitrincim.com'a 'en' dili eklendiginde sitemap
+   dogru kaldi ama Turkce anasayfa hreflang="en" ile var olmayan bir
+   adresi ilan etmeye basladi.
+*/
+test('metadata: sayfanın kendi dil listesi hreflang’i sınırlıyor', () => {
+  const kisitli = anasayfaMetadata(cokDilli, 'tr', undefined, ['tr']);
+  assert.deepEqual(Object.keys(kisitli.alternates.languages).sort(), ['tr', 'x-default']);
+
+  const serbest = anasayfaMetadata(cokDilli, 'tr');
+  assert.ok(Object.keys(serbest.alternates.languages).includes('en'));
+});
+
+test('metadata: sabit sayfa da dil listesini dinliyor', () => {
+  const m = sabitSayfaMetadata(cokDilli, 'iletisim', 'tr', undefined, ['tr']);
+  assert.deepEqual(Object.keys(m.alternates.languages).sort(), ['tr', 'x-default']);
+});
+
+test('metadata ve sitemap AYNI hreflang haritasını üretiyor', () => {
+  const baglam = baglamOlustur(cokDilli);
+  const diller = ['tr', 'en'] as const;
+
+  const kayit = sitemapUret(cokDilli, baglam, {
+    sayfalar: [{ sayfa: { tur: 'sabit', segment: 'iletisim' }, oncelik: 0.6, siklik: 'yearly', diller }],
+  }).find((k) => k.url.endsWith('/iletisim'));
+
+  const meta = sabitSayfaMetadata(cokDilli, 'iletisim', 'tr', undefined, diller);
+
+  // Iki kaynak ayni sayfa icin ayni alternatifleri gostermeli. Ayrisirlarsa
+  // Google celiskili iki sinyal aliyor ve hangisine inanacagini kendisi seciyor.
+  assert.deepEqual(kayit?.alternates?.languages, meta.alternates.languages);
+});

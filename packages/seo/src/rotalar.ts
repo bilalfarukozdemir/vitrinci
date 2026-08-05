@@ -71,12 +71,26 @@ export function kanonik(sayfa: SayfaTuru, dil: Dil, baglam: RotaBaglami): string
  * x-default zorunlu degil ama olmadiginda Google hangi surumu dil belirsiz
  * kullaniciya gosterecegini kendi tahmin ediyor. Varsayilan dili isaretliyoruz.
  */
-export function dilAlternatifleri(sayfa: SayfaTuru, baglam: RotaBaglami): Record<string, string> {
+export function dilAlternatifleri(
+  sayfa: SayfaTuru,
+  baglam: RotaBaglami,
+  /**
+   * Bu SAYFANIN var oldugu diller. Verilmezse sitenin destekledigi
+   * butun diller varsayiliyor.
+   *
+   * Sitenin dil desteklemesi, HER SAYFANIN o dilde yayinlandigi anlamina
+   * gelmiyor. Ingilizcesi henuz yazilmamis bir sayfaya `hreflang="en"`
+   * koymak, arama motorunu var olmayan bir adrese yonlendiriyor.
+   */
+  diller: readonly Dil[] = baglam.destekliDiller,
+): Record<string, string> {
   const harita: Record<string, string> = {};
 
-  for (const dil of baglam.destekliDiller) {
+  for (const dil of diller) {
     harita[dil] = kanonik(sayfa, dil, baglam);
   }
+  // x-default her zaman varsayilan dile isaret ediyor — o sayfa
+  // listede yoksa bile site bir yere dusmeli.
   harita['x-default'] = kanonik(sayfa, baglam.varsayilanDil, baglam);
 
   return harita;

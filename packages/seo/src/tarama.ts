@@ -1,4 +1,4 @@
-import type { IsletmeTaslak } from '@studio/data';
+import type { Dil, IsletmeTaslak } from '@studio/data';
 
 import { bolgeSlugu } from './metadata.ts';
 import { dilAlternatifleri, kanonik, type RotaBaglami, type SayfaTuru } from './rotalar.ts';
@@ -16,6 +16,20 @@ export type SayfaTanimi = {
   sayfa: SayfaTuru;
   oncelik: number;
   siklik: SitemapKaydi['changeFrequency'];
+  /**
+   * Bu sayfanin GERCEKTEN yayinlandigi diller. Verilmezse sitenin
+   * destekledigi butun diller varsayiliyor.
+   *
+   * NEDEN GEREKLI: sitemap sayfa x dil carpimi uretiyor. Turkce
+   * yayinlanmis ama Ingilizcesi henuz yazilmamis bir sayfa, dil listesine
+   * `en` eklendigi anda sitemap'te var gibi gorunuyor ve Google'a 404
+   * olarak gidiyor. Ayni sey `hreflang` icin de gecerli: olmayan bir
+   * surume alternatif gostermek, arama motoruna yanlis bilgi vermek.
+   *
+   * Bu ayrimin maliyeti bir kez odendi — tek sayfalik musteri sitesinde
+   * sitemap sekiz adres bildirirken uygulamada iki tane vardi.
+   */
+  diller?: readonly Dil[];
 };
 
 /**
@@ -79,14 +93,20 @@ export function sitemapUret(
 
   const kayitlar: SitemapKaydi[] = [];
 
-  for (const { sayfa, oncelik, siklik } of secenekler.sayfalar ?? sayfaTanimlari(isletme)) {
-    for (const dil of baglam.destekliDiller) {
+  for (const tanim of secenekler.sayfalar ?? sayfaTanimlari(isletme)) {
+    const { sayfa, oncelik, siklik } = tanim;
+    // Sayfanin kendi dil listesi varsa o, yoksa sitenin dilleri.
+    const diller = tanim.diller ?? baglam.destekliDiller;
+
+    for (const dil of diller) {
       kayitlar.push({
         url: kanonik(sayfa, dil, baglam),
         lastModified: secenekler.sonGuncelleme,
         changeFrequency: siklik,
         priority: oncelik,
-        alternates: { languages: dilAlternatifleri(sayfa, baglam) },
+        // hreflang da AYNI listeyle sinirli — sitemap'te olmayan bir
+        // surume alternatif gostermek celiski olurdu.
+        alternates: { languages: dilAlternatifleri(sayfa, baglam, diller) },
       });
     }
   }

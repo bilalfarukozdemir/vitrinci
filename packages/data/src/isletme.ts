@@ -171,6 +171,24 @@ export const seoSemasi = z.object({
   gbpPlaceId: z.string().optional(),
   /** Demo asamasinda arama motorlarina kapali tutulur. */
   indekslenebilir: z.boolean().default(false),
+
+  /**
+   * Ikinci dil surumu Google'a acik mi.
+   *
+   * `indekslenebilir`den AYRI bir anahtar, cunku iki farkli soruyu
+   * yanitliyorlar: birincisi "bu site canli mi", ikincisi "ikinci dilin
+   * metni hazir mi". Turkce surum aylardir indekslenirken Ingilizce
+   * metin taslak halinde durabilir.
+   *
+   * Kapaliyken iki sey birden oluyor: ikinci dil sitemap'e girmiyor ve
+   * sayfalari `noindex` aliyor. Ikisi tek anahtardan donmeli — biri
+   * acik biri kapali kalirsa sitemap Google'a "sunu tara" derken sayfa
+   * "beni indeksleme" diyor, ki bu Search Console'da dogrudan hata.
+   *
+   * Yarim cevrilmis bir sayfanin indekslenmesi, hic olmamasindan kotu:
+   * Google yanlis dilde bir sayfa gorup siteyi yanlis kitleye gosterir.
+   */
+  ingilizceYayinda: z.boolean().default(false),
   gaOlcumId: z.string().optional(),
   gscDogrulama: z.string().optional(),
 

@@ -105,6 +105,7 @@ function govde(
   aciklama: string,
   anahtarKelimeler: string[],
   baglam: RotaBaglami,
+  sayfaDilleri?: readonly Dil[],
 ): SayfaMetadata {
   const url = kanonik(sayfa, dil, baglam);
   const varsayilan = isletme.diller.varsayilan;
@@ -121,7 +122,21 @@ function govde(
     metadataBase: new URL(`https://${baglam.alanAdi}`),
     alternates: {
       canonical: url,
-      languages: dilAlternatifleri(sayfa, baglam),
+      /*
+         hreflang, bu SAYFANIN dilleriyle sinirli — sitenin dilleriyle
+         degil.
+
+         Sitenin ikinci bir dili olmasi, her sayfanin o dilde de
+         yayinlandigi anlamina gelmiyor. Ingilizce anasayfasi olan bir
+         site, Turkce bolge sayfasinin Ingilizcesi olmadan da yasar.
+         Ayrimi yapmazsak her Turkce sayfa Google'a var olmayan bir
+         Ingilizce adres bildirir.
+
+         Ayni kisit `sitemapUret` icinde de var ve orayla AYNI listeden
+         beslenmeli. Ikisi ayrisirsa sitemap "sunu tara" derken sayfa
+         "oyle bir sey yok" der.
+      */
+      languages: dilAlternatifleri(sayfa, baglam, sayfaDilleri),
     },
     // Demo asamasinda seo.indekslenebilir = false. Dogrulanmamis musteri
     // verisi Google'a dusmuyor.
@@ -153,6 +168,7 @@ export function anasayfaMetadata(
   isletme: IsletmeTaslak,
   dil: Dil,
   alanAdiEzme?: string,
+  sayfaDilleri?: readonly Dil[],
 ): SayfaMetadata {
   const varsayilan = isletme.diller.varsayilan;
   const baglam = baglamOlustur(isletme, alanAdiEzme);
@@ -178,7 +194,16 @@ export function anasayfaMetadata(
     ...new Set(isletme.hizmetler.flatMap((h) => h.anahtarKelimeler)),
   ].slice(0, 12);
 
-  return govde(isletme, dil, { tur: 'anasayfa' }, baslik, aciklama, anahtarKelimeler, baglam);
+  return govde(
+    isletme,
+    dil,
+    { tur: 'anasayfa' },
+    baslik,
+    aciklama,
+    anahtarKelimeler,
+    baglam,
+    sayfaDilleri,
+  );
 }
 
 // ---------------------------------------------------------------- hizmet sayfasi
@@ -188,6 +213,7 @@ export function hizmetMetadata(
   hizmet: Hizmet,
   dil: Dil,
   alanAdiEzme?: string,
+  sayfaDilleri?: readonly Dil[],
 ): SayfaMetadata {
   const varsayilan = isletme.diller.varsayilan;
   const baglam = baglamOlustur(isletme, alanAdiEzme);
@@ -216,6 +242,7 @@ export function hizmetMetadata(
     aciklama,
     hizmet.anahtarKelimeler.slice(0, 12),
     baglam,
+    sayfaDilleri,
   );
 }
 
@@ -226,6 +253,7 @@ export function bolgeMetadata(
   bolge: Bolge,
   dil: Dil,
   alanAdiEzme?: string,
+  sayfaDilleri?: readonly Dil[],
 ): SayfaMetadata {
   const varsayilan = isletme.diller.varsayilan;
   const baglam = baglamOlustur(isletme, alanAdiEzme);
@@ -260,6 +288,7 @@ export function bolgeMetadata(
     aciklama,
     anahtarKelimeler,
     baglam,
+    sayfaDilleri,
   );
 }
 
@@ -347,6 +376,7 @@ export function sabitSayfaMetadata(
   sayfaAnahtari: keyof typeof SAYFA_ADLARI,
   dil: Dil,
   alanAdiEzme?: string,
+  sayfaDilleri?: readonly Dil[],
 ): SayfaMetadata {
   const varsayilan = isletme.diller.varsayilan;
   const baglam = baglamOlustur(isletme, alanAdiEzme);
@@ -391,5 +421,6 @@ export function sabitSayfaMetadata(
     aciklama,
     [],
     baglam,
+    sayfaDilleri,
   );
 }
