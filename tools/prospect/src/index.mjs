@@ -58,6 +58,9 @@ if (bayrak('yardim') || bayrak('help') || argv.length === 0) {
     --nis=<ad>        ${Object.keys(NISLER).join(' | ')}
     --sehir=A,B,C     ${Object.keys(SEHIRLER).join(' | ')}
     --limit=N         Kac isletme icin rapor + hiz olcumu yapilsin (varsayilan 40)
+    --sayim            Hicbir dosya YAZMAZ, sadece sayilari gosterir.
+                      Filtre ayarini denerken kullan: --yeniden ile birlikte
+                      calistirildiginda kaynak taramanin raporlarini korur.
     --hiz-yok         PageSpeed olcumunu atla (cok daha hizli biter)
     --ilce-yok        Ilce ilce tarama yapma (daha az API cagrisi, daha az kapsam)
     --kuru            Places API'yi hic cagirmaz, sabit veri setiyle calisir.
@@ -184,7 +187,55 @@ let isletmeler;
 let hamKayitlar = [];
 let istekSayisi = 0;
 
+/*
+   NIS UYUSMAZLIGI KORUMASI.
+
+   `--yeniden` cikti dosyalarini KAYNAK KLASORUN ICINE yaziyor. Bu, ayni
+   nisle yeniden isleme yaparken dogru davranis — filtre ve skor ayarini
+   kota harcamadan denemenin tek yolu.
+
+   Ama farkli bir nisle cagrilirsa kaynak taramanin isletmeler.json,
+   denetim.json ve butun raporlarini sessizce eziyor. Bir kez yasandi:
+   insaat taramasinin uzerine perakende filtresi denendi ve 250 kayitlik
+   kisa liste 40'a, 1026 denetim 229'a dustu. `ham.json` girdi oldugu icin
+   sag kaldi ve geri donulebildi — ama sans eseri.
+
+   Klasor adi `TARIH-NIS-SEHIRLER` kalibinda oldugu icin nis adi zaten
+   icinde. Uyusmuyorsa duruyoruz.
+
+   Farkli nisi ayni ham veri uzerinde denemek istersen: klasoru kopyala,
+   adindaki nisi degistir, oyle calistir. Boylece kaynak bozulmaz.
+*/
 if (yenidenMod) {
+  /*
+     Yalnizca TARIHLI klasorlerde calisiyor: `YYYY-MM-DD-nis-sehirler`.
+     Nis adi orada dorduncu parcada duruyor.
+
+     Elle acilmis klasorler (`sinama-...`, `kuru`) bu kalibi tasimadigi
+     icin kontrol disi — zaten korunacak bir kaynak tarama degiller.
+     Ilk surum kalibi kontrol etmiyordu ve `sinama-perakende-duzce-bolu-
+     sakarya` klasorunde nisi "bolu" diye okuyup dogru komutu reddetti.
+  */
+  const tarihliKalip = /^\d{4}-\d{2}-\d{2}-([a-z]+)-/.exec(yenidenKlasor);
+  const klasordekiNis = tarihliKalip?.[1];
+  if (klasordekiNis && klasordekiNis !== nisAnahtar) {
+    console.error(`
+  HATA: niş uyuşmuyor — bu komut kaynak taramayı EZERDİ.
+
+    Klasör : ${yenidenKlasor}   (niş: ${klasordekiNis})
+    Verilen: --nis=${nisAnahtar}
+
+    --yeniden çıktıyı kaynak klasörün İÇİNE yazıyor. Farklı bir nişle
+    çalıştırmak o taramanın işletmeler.json, denetim.json ve bütün
+    raporlarını siler.
+
+    Başka niş denemek istiyorsan klasörü kopyala:
+      cp -r out/${yenidenKlasor} out/${yenidenKlasor.replace(klasordekiNis, nisAnahtar)}
+      npm run tara -- --nis=${nisAnahtar} --yeniden=${yenidenKlasor.replace(klasordekiNis, nisAnahtar)}
+`);
+    process.exit(1);
+  }
+
   const hamYol = resolve(ciktiDizin, 'ham.json');
   if (!existsSync(hamYol)) {
     console.error(`\n  HATA: ${hamYol} bulunamadı.`);
@@ -491,6 +542,36 @@ if (hizOlc) {
 }
 
 // ---------------------------------------------------------------- 4. cikti
+
+/*
+   --sayim: HICBIR SEY YAZMADAN sayilari goster.
+
+   NEDEN VAR: `--yeniden` cikti dosyalarini kaynak klasore yaziyor ve
+   rapor dizinini once SILIYOR (asagidaki rmSync). Yani filtre ayarini
+   "sadece kac kayit kaliyor" diye merak edip calistirmak, o taramanin
+   butun raporlarini yeniden uretiyor — farkli bir --limit verildiyse
+   sayilari da degistiriyor.
+
+   Bu iki kez yasandi. Ikincisinde amac sadece regresyon kontroluydu:
+   `--limit=1` ile calistirildi ve iki taramanin raporlari 250+300'den
+   1'e dustu. Ikisi de geri alinabildi cunku `ham.json` girdi olarak
+   korunuyor — ama geri almak 40 dakika surdu.
+
+   Sayiyi gormek icin dosya yazmaya gerek yok. Bu bayrak tam orada
+   duruyor.
+*/
+if (bayrak('sayim')) {
+  console.log(`
+  [4/4] SAYIM MODU — hiçbir dosya yazılmadı.
+
+        Denetlenen : ${denetlenen.length}
+        Skorlanan  : ${skorlanan.length}
+        Kısa liste : ${kisaListe.length}  (--limit=${limit})
+
+        Rapor üretmek için --sayim bayrağını kaldır.
+`);
+  process.exit(0);
+}
 
 console.log('  [4/4] Raporlar yazılıyor...');
 

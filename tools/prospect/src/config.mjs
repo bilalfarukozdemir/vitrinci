@@ -81,6 +81,14 @@ export const NISLER = {
   otomotiv: {
     ad: 'Otomotiv / Servis',
     not: 'Yerel arama + harita ağırlıklı. Ticket düşük ama hacim yüksek, hızlı referans üretir.',
+    /*
+       Kurtarma: "<marka> OTO KURTARMA VE NAKLIYAT" gibi karma unvanlar
+       nakliyat kalibina takilir ama gercek bir otomotiv isletmesidir.
+       Insaat nisindeki ayni mantik.
+    */
+    kurtarmaKaliplari: [
+      /\boto\b|otomotiv|\barac\b|\blastik\b|kaporta|ekspertiz|yedek parca|\bservis\b|oto kurtarma|\bcekici\b|rent a car/,
+    ],
     sorgular: [
       'oto servis',
       'oto kaporta boya',
@@ -88,6 +96,42 @@ export const NISLER = {
       'oto elektrik',
       'araç kiralama',
       'oto ekspertiz',
+      'oto kurtarma',
+      'oto yıkama',
+      'yedek parça',
+      'motor tamiri',
+    ],
+  },
+
+  /*
+     PERAKENDE — calisma icin eklendi, satis icin degil.
+
+     Bu nis, "%55'inin sitesi yok" bulgusunun sektorden bagimsiz olup
+     olmadigini sinamak icin var. Insaat ve turizm birbirine hic
+     benzemiyor ve ikisinde de ayni oran cikti; perakende ucuncu ve en
+     farkli profil — kucuk dukkanin gercekten siteye ihtiyaci olmayabilir,
+     yani oranin kirilmasi en muhtemel yer burasi.
+
+     Kirilirsa bu kotu haber degil, DAHA ILGINC bir bulgu olur:
+     "ihtiyaci olan sektorlerde %55, olmayanlarda %X".
+  */
+  perakende: {
+    ad: 'Perakende / Mağaza',
+    not: 'Çalışma için. Ticket düşük, satış önceliği değil — oranın sektörden bağımsızlığını sınıyor.',
+    kurtarmaKaliplari: [
+      /\bmagaza\b|\bmarket\b|\bgiyim\b|ayakkabi|kuyumcu|kirtasiye|\bcicek\b|\bmobilya\b|beyaz esya|elektronik|\boptik\b|\bhediyelik\b/,
+    ],
+    sorgular: [
+      'giyim mağazası',
+      'ayakkabı mağazası',
+      'kuyumcu',
+      'kırtasiye',
+      'çiçekçi',
+      'mobilya mağazası',
+      'beyaz eşya bayi',
+      'elektronik mağaza',
+      'optik gözlük',
+      'hediyelik eşya',
     ],
   },
 
@@ -189,8 +233,69 @@ const INSAAT_VE_YAPI = [
   'home_improvement_store', 'furniture_store', 'home_goods_store',
 ];
 
+/*
+   OTOMOTIV, PERAKENDE_HIZMET'IN ICINDEN CIKARILIYOR.
+
+   `car_repair`, `car_wash`, `car_dealer`, `car_rental` — bunlar perakende
+   kumesinin uyesi ama otomotiv nisinin HEDEFI. Kumeyi oldugu gibi blok
+   listesi yapmak, otomotiv taramasinin aradigi her seyi elemesi demekti.
+
+   Tam olarak bu hata bir kez yapildi: tek bir blok listesi vardi, icerigi
+   insaata gore yazilmisti ve `restaurant`/`hotel` yasakliydi — turizm
+   taramasi hedefini eliyordu. Ayni tuzagin otomotiv surumu bu.
+
+   Ayrim burada yapiliyor ki iki nis de ayni kumeden, birbirini ezmeden
+   beslensin.
+*/
+const OTOMOTIV_TURLERI = ['car_dealer', 'car_rental', 'car_wash', 'car_repair'];
+
+/**
+ * YAPI MALZEMESI VE TOPTAN — insaat kumesinde eksikti.
+ *
+ * Perakende filtresi sinanirken `building_materials_store` turundeki iki
+ * yapi malzemesi bayisi magaza sayilip gecti. Sebep basit:
+ * `INSAAT_VE_YAPI` listesinde `building_materials_store` yok. `supplier`,
+ * `wholesaler` ve `manufacturer` de yoktu — toptanci ve imalatci
+ * perakende degil.
+ */
+const YAPI_MALZEME_TOPTAN = [
+  'building_materials_store', 'supplier', 'wholesaler', 'manufacturer',
+  'contractor', 'construction_company',
+];
+
+/**
+ * MOBILYA VE EV ESYASI — perakendenin HEDEFI, blogu degil.
+ *
+ * `INSAAT_VE_YAPI` icinde `furniture_store` ve `home_goods_store`
+ * duruyor; insaat nisi icin dogru (yapi marketi gurultusu). Ama
+ * perakende sorgularinda "mobilya magazasi" ve "beyaz esya bayi" var —
+ * yani o listeyi oldugu gibi bloklamak nisin kendi hedefini elemesi
+ * demekti. Otomotivde farkettigim tuzagin aynisi, bu sefer mobilyada.
+ */
+const EV_ESYASI_PERAKENDE = ['furniture_store', 'home_goods_store'];
+
+/** Insaat kumesi, perakendenin hedefi olan magaza turleri cikarilmis. */
+const INSAAT_PERAKENDE_DISI = () =>
+  INSAAT_VE_YAPI.filter((t) => !EV_ESYASI_PERAKENDE.includes(t));
+
+/** Perakende kumesi, otomotiv turleri cikarilmis hali. */
+const PERAKENDE_OTO_DISI = PERAKENDE_HIZMET.filter((t) => !OTOMOTIV_TURLERI.includes(t));
+
+/**
+ * Serbest meslek / ofis hizmetleri.
+ *
+ * Perakende kumesinin icinde duruyorlar ama dukkan degiller. "Perakende"
+ * nisi magaza ariyor; avukat, muhasebeci, emlakci ve sigortaci oraya
+ * gurultu olarak giriyor. Kendi nisleri olmayi hak ediyorlar ama bugun
+ * yoklar — o yuzden simdilik eleniyorlar.
+ */
+const OFIS_HIZMETLERI = [
+  'lawyer', 'accounting', 'insurance_agency', 'real_estate_agency', 'travel_agency',
+];
+
 export const TUR_KUMELERI = {
   YEME_ICME, KONAKLAMA, KISISEL_BAKIM_SAGLIK, PERAKENDE_HIZMET, INSAAT_VE_YAPI,
+  OTOMOTIV_TURLERI, PERAKENDE_OTO_DISI, OFIS_HIZMETLERI,
 };
 
 /*
@@ -226,6 +331,22 @@ NISLER.turizm.blokTurler = [
 const YEME_ICME_AD = /restoran|restaurant|lokanta|kebap|pide|kahvalt|cafe|kafe|bistro|pastane|firin|bufe|dondurma/;
 const KONAKLAMA_AD = /otel|hotel|pansiyon|konuk ?evi|\bapart\b|bungalov|bungalow|tatil koyu|\bkamp\b|konagi/;
 const INSAAT_AD = /insaat|muteahhit|hafriyat|nakliyat|tadilat|yapi market|nalbur|hirdavat/;
+
+/**
+ * INSAAT_AD'in genis surumu — otomotiv ve perakende icin.
+ *
+ * `INSAAT_AD` turizm nisi icin yazilmisti ve orada yetiyor. Perakende
+ * filtresi onunla sinandiginda insaat ham verisinden 229 kayit gecti ve
+ * ilk otuzunda "AKTIF BETON", "Sagiroglu prefabrik", "AS celik prefabrik",
+ * "TGB IC MIMARLIK", "Superlit Boru" vardi — hicbiri magaza degil.
+ *
+ * Sebep: bu isletmelerin cogunun Google turu `point_of_interest` ya da
+ * `establishment` gibi jenerik; tur filtresine takilmiyorlar. Adlarinda
+ * da "insaat" kelimesi gecmiyor — "beton", "yapi", "prefabrik", "celik"
+ * geciyor. Dar kalip onlari goremiyordu.
+ */
+const INSAAT_GENIS_AD =
+  /insaat|ins|muteahhit|hafriyat|tadilat|nalbur|hirdavat|tesisat|dekorasyon|cam|kaplama|\bbeton\b|\byapi\b|yapim|prefabrik|peyzaj|\bcelik\b|mimarlik|dograma|\bvinc\b|istinat|\bcati\b|taahhut|fidancilik|kilit tasi|dogal tas|kayrak|\bkum\b|\bcakil\b|\bboru\b|yalitim|izolasyon/;
 
 NISLER.insaat.sektorDisiAdKaliplari = [
   YEME_ICME_AD,
@@ -280,6 +401,13 @@ export const adNormalize = trNormalize;
  */
 export const EVRENSEL_AD_KALIPLARI = [
   /belediy|kaymakam|valilik|mudurlug|mudurluk|baskanlig|\bkurumu\b|sube mudur/,
+  /*
+     "Mudurnu Ilce Muftulugu" perakende sinamasinda listeye girdi. Google
+     turu `point_of_interest` oldugu icin tur filtresine takilmiyor ve
+     adinda "mudurluk" gecmiyor. Diyanet birimleri de web sitesi satin
+     alan isletmeler degil — her niste elenmeli.
+  */
+  /muftulug|muftuluk|diyanet|kuran kursu|imam hatip/,
   /ogretmenevi|ogretmen evi|misafirhane|sosyal tesis|dinlenme tesis/,
   /millet bahcesi|kultur parki|sehitlik|sehitleri|aniti\b|mesire|piknik alani/,
   /turbe|\bcami\b|camii|mescit|kilise|mezarlik|\bmuze\b|saat kulesi/,
@@ -454,3 +582,55 @@ export const SKOR = {
    */
   yorumDoygunluk: 25,
 };
+
+/*
+   OTOMOTIV VE PERAKENDE ELEME LISTELERI.
+
+   Ikisi de calisma icin eklendi. Ayni yerde duruyorlar ki hangi nisin
+   neyi neden eledigi yan yana okunabilsin — insaat ve turizmde olan
+   duzen.
+
+   DIKKAT: bu iki nis birbirini eliyor. Otomotiv `car_*` turlerini
+   ariyor, perakende onlari blokluyor; tersi de dogru. Kesismeleri
+   ayni isletmenin iki calismada birden sayilmasina yol acardi ve
+   "%55" oranini bozardi.
+*/
+NISLER.otomotiv.blokTurler = [
+  ...YEME_ICME,
+  ...KONAKLAMA,
+  ...KISISEL_BAKIM_SAGLIK,
+  ...INSAAT_VE_YAPI,
+  ...YAPI_MALZEME_TOPTAN,
+  ...PERAKENDE_OTO_DISI,
+];
+
+NISLER.perakende.blokTurler = [
+  ...YEME_ICME,
+  ...KONAKLAMA,
+  ...KISISEL_BAKIM_SAGLIK,
+  // Mobilya ve ev esyasi CIKARILDI — perakendenin hedefi.
+  ...INSAAT_PERAKENDE_DISI(),
+  ...YAPI_MALZEME_TOPTAN,
+  ...OTOMOTIV_TURLERI,
+  ...OFIS_HIZMETLERI,
+];
+
+NISLER.otomotiv.sektorDisiAdKaliplari = [
+  YEME_ICME_AD,
+  KONAKLAMA_AD,
+  INSAAT_GENIS_AD,
+  /kuafor|guzellik salonu|\bberber\b|eczane|veteriner/,
+  /\bmarket\b|bakkal|\bmanav\b|\bkasap\b|kirtasiye|kuyumcu/,
+  // "galeri" TEK BASINA elenmiyor: "oto galeri" hedefin kendisi.
+  // Sanat galerisi ve benzerleri icin kelime sinirli kalip:
+  /sanat galeri|resim galeri/,
+];
+
+NISLER.perakende.sektorDisiAdKaliplari = [
+  YEME_ICME_AD,
+  KONAKLAMA_AD,
+  INSAAT_GENIS_AD,
+  /kuafor|guzellik salonu|\bberber\b|eczane|dis klinigi|veteriner/,
+  /\boto\b|otomotiv|lastikci|kaporta|ekspertiz|oto galeri|rent a car/,
+  /\bavukat\b|hukuk buro|mali musavir|muhasebe|\bsigorta\b|\bemlak\b|gayrimenkul/,
+];
