@@ -261,6 +261,32 @@ function yasaklilar() {
      Her kuru koşudan sonra denetçinin kızması, tam da kimsenin ona
      bakmamasını sağlayacak türden bir gürültü.
   */
+  /*
+     PLATFORM ALAN ADLARI YASAKLANMIYOR.
+
+     Bir işletmenin Google kaydındaki "site" alanı her zaman kendi alan
+     adı değil: çoğu küçük işletme oraya Instagram profilini ya da bir
+     WhatsApp bağlantısını yazıyor. O değer olduğu gibi yasaklı listeye
+     girdiğinde `instagram.com` ve `api.whatsapp.com` gibi alan adları
+     "gerçek işletme verisi" sayılıyor — ve bunlara kaynak kodunda
+     meşru olarak atıfta bulunan dosyalar sızıntı ilan ediliyor.
+
+     Tam olarak bu yaşandı: perakende ve otomotiv taramaları eklendiğinde
+     `api.whatsapp.com` yasaklı terime dönüştü ve `config.mjs`in KENDİ
+     sosyal host listesini bloke etti.
+
+     Bu alan adları kimseyi tanımlamıyor. "Bir işletme WhatsApp
+     kullanıyor" bilgisi hangi işletme olduğunu söylemiyor; koruma
+     değeri sıfır, yanlış alarm maliyeti yüksek. Liste taramanın kendi
+     tanımından okunuyor ki tek yerde kalsın.
+  */
+  let platformHostlari = new Set();
+  try {
+    const cfg = readFileSync(resolve(kok, 'tools/prospect/src/config.mjs'), 'utf8');
+    const blok = cfg.match(/SOSYAL_HOSTLAR\s*=\s*\[([\s\S]*?)\]/)?.[1] ?? '';
+    for (const m of blok.matchAll(/'([^']+)'/g)) platformHostlari.add(m[1].toLowerCase());
+  } catch { /* config okunamazsa koruma aynen calisir, sadece yanlis alarm riski kalir */ }
+
   let hamSayisi = 0;
   for (const ham of dosyalariTara(resolve(kok, 'tools/prospect/out'), 'ham.json')) {
     if (/[\\/]kuru[\\/]/.test(ham)) continue;
@@ -268,7 +294,21 @@ function yasaklilar() {
       const kayitlar = JSON.parse(readFileSync(ham, 'utf8'));
       for (const k of kayitlar) {
         ekle(k.telefon);
-        if (k.site) ekle(String(k.site).replace(/^https?:\/\/(www\.)?/, '').replace(/\/.*$/, ''));
+        if (!k.site) continue;
+        const host = String(k.site).replace(/^https?:\/\/(www\.)?/, '').replace(/\/.*$/, '');
+        /*
+           TAM EŞLEŞME, alt alan adı DEĞİL.
+
+           İlk hâli `host.endsWith('.' + p)` de sayıyordu ve bu yanlıştı:
+           `bir-firma.blogspot.com` ya da `bir-firma.wordpress.com`
+           platformun kendisi değil, o platformda barınan BİR İŞLETMEYİ
+           tanımlıyor. Alt alan adını muaf tutmak, korumayı tam da
+           koruması gereken yerde deler.
+
+           `instagram.com/kullanici` zaten sorun değil: yol kısmı
+           yukarıda kırpılıyor, geriye yalnızca platform adı kalıyor.
+        */
+        if (!platformHostlari.has(host.toLowerCase())) ekle(host);
       }
       hamSayisi += kayitlar.length;
     } catch { /* atla */ }

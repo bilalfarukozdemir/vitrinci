@@ -211,6 +211,7 @@ export const seoSemasi = z.object({
       galeri: yerelliMetin.optional(),
       sss: yerelliMetin.optional(),
       blog: yerelliMetin.optional(),
+      arastirma: yerelliMetin.optional(),
     })
     .optional(),
 });

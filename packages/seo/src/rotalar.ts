@@ -19,6 +19,20 @@ export const SEGMENTLER = {
   sss: { tr: 'sss', en: 'faq', de: 'faq', ar: 'asila', ru: 'voprosy', fr: 'faq', es: 'preguntas' },
   menu: { tr: 'menu', en: 'menu', de: 'speisekarte', ar: 'qaima', ru: 'menyu', fr: 'menu', es: 'carta' },
   blog: { tr: 'blog', en: 'blog', de: 'blog', ar: 'mudawana', ru: 'blog', fr: 'blog', es: 'blog' },
+  /*
+     Yayinlanan ozgun arastirma / veri calismasi.
+
+     `blog`dan ayri tutuluyor: blog surekli akan icerik, arastirma tek ve
+     kalici bir belge. Ikisi ayni segmenti paylassaydi calisma, blog
+     akisinin icinde kaybolurdu — oysa siteye baglanti kazandiracak,
+     alintilanacak ve basina gonderilecek sayfa o.
+
+     Her musteri sitesinde kullanilmayacak, `galeri` ve `menu` gibi.
+  */
+  arastirma: {
+    tr: 'arastirma', en: 'research', de: 'studie', ar: 'dirasa',
+    ru: 'issledovanie', fr: 'etude', es: 'estudio',
+  },
 } as const satisfies Record<string, Record<Dil, string>>;
 
 export type SegmentAnahtari = keyof typeof SEGMENTLER;

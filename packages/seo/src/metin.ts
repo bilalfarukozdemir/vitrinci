@@ -87,6 +87,7 @@ export const SAYFA_ADLARI = {
   galeri: { tr: 'Galeri', en: 'Gallery', de: 'Galerie', ar: 'معرض', ru: 'Галерея', fr: 'Galerie', es: 'Galería' },
   sss: { tr: 'Sık Sorulan Sorular', en: 'FAQ', de: 'Häufige Fragen', ar: 'الأسئلة الشائعة', ru: 'Вопросы и ответы', fr: 'Questions fréquentes', es: 'Preguntas frecuentes' },
   blog: { tr: 'Blog', en: 'Blog', de: 'Blog', ar: 'المدونة', ru: 'Блог', fr: 'Blog', es: 'Blog' },
+  arastirma: { tr: 'Araştırma', en: 'Research', de: 'Studie', ar: 'دراسة', ru: 'Исследование', fr: 'Étude', es: 'Estudio' },
 } as const satisfies Record<string, Record<Dil, string>>;
 
 /** "Düzce ve çevresinde hizmet veriyoruz" gibi bolge cumlesi. */
