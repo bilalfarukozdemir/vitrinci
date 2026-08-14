@@ -159,3 +159,13 @@ collect with it, the photographs you download, or the messages you send. Those
 are governed by Google's API terms, by data protection law, by copyright and by
 the rules on unsolicited commercial contact.
 [ETHICS-AND-LAW.md](ETHICS-AND-LAW.md) walks through each.
+
+---
+
+## Support
+
+[![GitHub Sponsors](https://img.shields.io/github/sponsors/bilalfarukozdemir?label=sponsor&logo=githubsponsors&color=ea4aaa)](https://github.com/sponsors/bilalfarukozdemir)
+
+This is free and will stay free. If it is useful to you, you can
+[sponsor the work](https://github.com/sponsors/bilalfarukozdemir) — a star or a
+good bug report is worth just as much.
