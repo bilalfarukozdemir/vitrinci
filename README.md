@@ -169,3 +169,15 @@ the rules on unsolicited commercial contact.
 This is free and will stay free. If it is useful to you, you can
 [sponsor the work](https://github.com/sponsors/bilalfarukozdemir) — a star or a
 good bug report is worth just as much.
+
+---
+
+## Colophon
+
+| | |
+|---|---|
+| Maintenance | One developer, in spare time — [@bilalfarukozdemir](https://github.com/bilalfarukozdemir) |
+| Funding | None. No ads, no telemetry, no paid tier; the only revenue line is [GitHub Sponsors](https://github.com/sponsors/bilalfarukozdemir) |
+| Status | Actively developed. One production user — see [Status](#status) |
+| Licence | MIT |
+| Support | Bug reports are read and acted on. No response-time commitment, no warranty |
