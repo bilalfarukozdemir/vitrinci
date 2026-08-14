@@ -68,6 +68,42 @@ if (!kosular.length) {
 const sektorler = [];
 const toplam = { denetlenen: 0, sitesiz: 0, siteli: 0, bulgular: {} };
 const tarihler = [];
+const iller = {};
+
+/*
+   İL KIRILIMI — denetim kayıtları ile ham veri birleştirilerek.
+
+   `denetim.json` Google Place ID ile anahtarlanıyor ve içinde adres yok;
+   il bilgisi yalnızca `ham.json`da. İkisini birleştirmeden "Düzce'de
+   oran ne" sorusuna cevap veremiyoruz.
+
+   Bu soru önemli çünkü yerel basın üç ilin ortalamasıyla ilgilenmiyor,
+   kendi ilinin sayısını istiyor. Basın metnindeki rakam da buradan
+   geliyor — sayfa ile metnin ayrışmaması için tek kaynak.
+*/
+for (const kosu of kosular) {
+  const denYol = join(outDizin, kosu, 'denetim.json');
+  const hamYol = join(outDizin, kosu, 'ham.json');
+  if (!existsSync(denYol) || !existsSync(hamYol)) continue;
+
+  const hamKayitlar = JSON.parse(readFileSync(hamYol, 'utf8'));
+  const ilHarita = new Map();
+  for (const k of hamKayitlar) {
+    const pid = k.id ?? k.placeId ?? k.place_id;
+    const adres = k.formattedAddress ?? k.adres ?? k.formatted_address ?? '';
+    const m = String(adres).match(/(Düzce|Bolu|Sakarya)/i);
+    if (pid && m) ilHarita.set(pid, m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase());
+  }
+
+  const den = JSON.parse(readFileSync(denYol, 'utf8'));
+  for (const [pid, kayit] of Object.entries(den)) {
+    const il = ilHarita.get(pid);
+    if (!il) continue;
+    iller[il] ??= { denetlenen: 0, sitesiz: 0 };
+    iller[il].denetlenen++;
+    if ((kayit.bulgular ?? []).includes('site_yok')) iller[il].sitesiz++;
+  }
+}
 
 for (const kosu of kosular) {
   const [yil, ay, gun, nis] = kosu.split('-');
@@ -114,6 +150,9 @@ const cikti = {
     sitesizOran: yuzde(toplam.sitesiz, toplam.denetlenen),
     siteli: toplam.siteli,
   },
+  iller: Object.entries(iller)
+    .map(([ad, v]) => ({ ad, denetlenen: v.denetlenen, sitesiz: v.sitesiz, sitesizOran: yuzde(v.sitesiz, v.denetlenen) }))
+    .sort((a, b) => b.sitesizOran - a.sitesizOran),
   sektorler: sektorler
     .map((s) => ({
       ad: s.ad,
@@ -167,6 +206,9 @@ console.log(`
 
   Sektörler:
 ${cikti.sektorler.map((s) => `    ${s.ad.padEnd(22)} %${String(s.sitesizOran).padStart(5)}  (n=${s.denetlenen})`).join('\n')}
+
+  İller:
+${cikti.iller.map((i) => `    ${i.ad.padEnd(12)} %${String(i.sitesizOran).padStart(5)}  (n=${i.denetlenen})`).join('\n')}
 
   Sitesi olanlar içinde:
 ${cikti.siteliBulgular.map((b) => `    ${b.ad.padEnd(32)} %${String(b.oran).padStart(5)}`).join('\n')}

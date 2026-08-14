@@ -163,6 +163,19 @@ export const sosyalSemasi = z.object({
   youtube: url.optional(),
   x: url.optional(),
   tiktok: url.optional(),
+  /**
+   * GitHub profili.
+   *
+   * Diger alanlar pazarlama kanali; bu KANIT. Yazilim isi satan biri icin
+   * "bu cerceveyi ben yazdim" cumlesini tiklanabilir hale getiriyor —
+   * teknik bir alici icin referans metninden guclu.
+   *
+   * `sameAs` icine giriyor ve Google'in varlik eslestirmesini besliyor:
+   * ayni kisinin GitHub, site ve isletme kaydi arasindaki bagi kuruyor.
+   * Yeni bir alan adinin en buyuk sorunu "bu kim" ve bu, cevabin bir
+   * parcasi.
+   */
+  github: url.optional(),
 });
 
 export const seoSemasi = z.object({
